@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ o.team }}{% endblock %}
+{% block body %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{{ url_for('tier', tier=tier) }}">{{ tier }}</a></li>
+  <li class="breadcrumb-item active">{{ o.team }}</li>
+</ol></nav>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+  <div>
+    <h1 class="h3 mb-1">{{ o.team }}</h1>
+    <div class="text-secondary">Rank #{{ o.rank }} - {{ o.record }} - {{ tier }}</div>
+  </div>
+  <div class="text-end">
+    <div class="display-6 mono">{{ '%.0f'|format(o.playoff_prob*100) }}%</div>
+    <div class="text-secondary small">playoff odds - avg seed {{ '%.1f'|format(o.avg_seed) }}</div>
+  </div>
+</div>
+
+<div class="alert {% if o.status=='CLINCHED' %}alert-success{% elif o.status=='ELIMINATED' %}alert-danger{% else %}alert-secondary{% endif %} mt-3">
+  {{ o.headline }}
+</div>
+
+{% if tmeta %}
+<div class="row g-2 mb-3 mono">
+  {% macro metric(label, val, hint='') %}
+  <div class="col-6 col-md-2"><div class="card h-100" title="{{ hint }}"><div class="card-body text-center p-2">
+    <div class="text-secondary" style="font-size:.72rem">{{ label }}</div>
+    <div class="fw-semibold">{{ val if val is not none else '-' }}</div>
+  </div></div></div>
+  {% endmacro %}
+  {{ metric('Proj. final wins', tmeta.proj_final_w, 'Average final game-wins across 30,000 simulations of the remaining schedule.') }}
+  {{ metric('RPI', tmeta.rpi, 'Ratings Percentage Index from the league sheet: blends win% with opponent strength.') }}
+  {{ metric('SOS played', tmeta.past_sos, 'Strength of schedule already played: average win% of opponents faced so far.') }}
+  {{ metric('SOS remaining', tmeta.fut_sos, 'Strength of remaining schedule: average win% of opponents still to play.') }}
+  {{ metric('Last 5', tmeta.last5, 'Record over the last 5 matches (from the league sheet).') }}
+  {{ metric('League magic #', tmeta.sheet_magic, 'The league standings sheet own magic number to clinch a playoff spot.') }}
+</div>
+<p class="text-secondary small">RPI / strength-of-schedule (opponents' win %) and the league's own magic number, straight from the standings sheet. Projected final wins is the simulation average.</p>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">CLINCH IN</div>
+    <div class="h4 mb-0">{{ o.clinch_wins if o.clinch_wins is not none else '-' }}{% if o.clinch_wins is not none %} wins{% endif %}</div>
+  </div></div></div>
+  <div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">ELIMINATED IN</div>
+    <div class="h4 mb-0">{{ o.elim_losses if o.elim_losses is not none else '-' }}{% if o.elim_losses is not none %} losses{% endif %}</div>
+  </div></div></div>
+</div>
+
+<h2 class="h5">What they need: playoff odds by final record</h2>
+<p class="text-secondary small">Each point: the probability of making the playoffs if the season ends with that many total wins (from simulating everyone else's remaining games).</p>
+<canvas id="curve" height="110"></canvas>
+
+{% if roster %}
+<h2 class="h5 mt-4">Roster &amp; player stats</h2>
+{% if totals %}
+<p class="text-secondary small mono">
+  Team totals ({{ totals.n_players }} players, {{ totals.gp }} games):
+  {{ totals.G }} goals - {{ totals.A }} assists - {{ totals.S }} saves -
+  {{ totals.SH }} shots - {{ totals.DM }} demos - {{ totals.MVP }} MVPs
+  &nbsp;|&nbsp; {{ totals.goals_for_pg }} goals/game
+</p>
+{% endif %}
+<table class="table table-sm table-hover mono">
+  <thead><tr>
+    <th>Player</th><th>GP</th><th>Pts/g</th><th>G/g</th><th>A/g</th>
+    <th>Sv/g</th><th>Sh/g</th><th>SH%</th><th>MVP</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for p in roster %}
+    <tr>
+      <td class="fw-semibold">{{ p.Player }}</td>
+      <td>{{ p.GP }}</td>
+      <td>{{ '%.1f'|format(p['Pts/g']) }}</td>
+      <td>{{ '%.2f'|format(p['G/g']) }}</td>
+      <td>{{ '%.2f'|format(p['A/g']) }}</td>
+      <td>{{ '%.2f'|format(p['S/g']) }}</td>
+      <td>{{ '%.2f'|format(p['SH/g']) }}</td>
+      <td>{{ '%.0f'|format(p['SH%']*100) }}%</td>
+      <td>{{ p.MVP }}</td>
+      <td><a href="{{ url_for('player', name=p.Player) }}" class="btn btn-sm btn-outline-light py-0">view</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('curve'), {
+  type: 'line',
+  data: {
+    labels: {{ chart.labels|tojson }},
+    datasets: [{
+      label: 'P(playoffs)',
+      data: {{ chart.probs|tojson }},
+      borderColor: '#37b24d', backgroundColor: 'rgba(55,178,77,.15)',
+      fill: true, tension: .3, pointRadius: 2
+    }]
+  },
+  options: {
+    scales: {
+      y: { min: 0, max: 100, title: {display:true, text:'% chance of playoffs'} },
+      x: { title: {display:true, text:'final regular-season wins'} }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

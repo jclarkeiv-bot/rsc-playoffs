@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Projections{% endblock %}
+{% block body %}
+<h1 class="h3">Projected final leaders <small class="text-secondary">- regression-adjusted</small></h1>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small">Tier</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Stat</label>
+    <select name="stat" class="form-select" onchange="this.form.submit()">
+      {% for k, lbl in stat_opts.items() %}<option value="{{ k }}" {{ 'selected' if k==stat }}>{{ lbl }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Go</button></div>
+</form>
+<p class="text-secondary small">Projected end-of-season {{ stat_label }} if the season finished today's pace, regressed toward each tier's average for fairness on small samples.</p>
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>#</th><th>Player</th><th>Tier</th><th>Team</th><th>GP</th>
+    <th>{{ stat_label }} now</th><th>{{ stat_label }}/g</th><th>Projected final</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><a href="{{ url_for('player', name=r.Player) }}" class="fw-semibold">{{ r.Player }}</a></td>
+      <td>{{ r.Tier }}</td>
+      <td><a href="{{ url_for('team', tier=r.Tier, team=r.Team) }}">{{ r.Team }}</a></td>
+      <td>{{ r.GP }}</td>
+      <td>{{ r[stat_col]|int }}</td>
+      <td>{{ '%.2f'|format(r.per_game) }}</td>
+      <td class="fw-semibold">{{ r.proj|int }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

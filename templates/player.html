@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ name }}{% endblock %}
+{% block body %}
+{% if prof is none %}
+  <div class="alert alert-warning">No player named <strong>{{ name }}</strong> found.
+    <a href="{{ url_for('players_search') }}">Search players</a>.</div>
+{% else %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+  <div>
+    <h1 class="h3 mb-1">{{ prof.name }}</h1>
+    <div class="text-secondary">
+      {{ prof.tier }} -
+      <a href="{{ url_for('team', tier=prof.tier, team=prof.team) }}">{{ prof.team }}</a>
+      - {{ prof.w }}-{{ prof.l }} ({{ '%.3f'|format(prof.wp) }})
+    </div>
+  </div>
+  <div class="text-end">
+    {% if rat %}
+    <div class="display-6 mono" title="Overall Rating (0-100): league percentile of cross-tier skill.">{{ rat.ovr }}<span class="fs-6 text-secondary"> OVR</span></div>
+    <div class="text-secondary small" title="GP = Games Played. Each match day is a 4-game series and every game counts, so GP counts individual games, not match days.">overall rating (0-100) - {{ prof.gp }} games (GP)</div>
+    {% else %}
+    <div class="display-6 mono">{{ prof.pts }}</div>
+    <div class="text-secondary small" title="GP = Games Played (individual games; each match day = 4 games).">total points - {{ prof.gp }} games (GP)</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if rat %}
+<div class="d-flex flex-wrap gap-2 mt-2">
+  <span class="badge text-bg-primary" title="Overall Rating: league percentile (0-100) of cross-tier skill = within-tier dominance (per-game stats z-scored vs tier peers, weighted by what correlates with winning, small samples shrunk) PLUS a tier-strength bonus.">Overall rating {{ rat.ovr }}/100</span>
+  <span class="badge text-bg-secondary" title="Where this player ranks within their own tier on the composite, and how many SDs above the tier average they sit.">Tier dominance: {{ rat.tier_pct }}th ({{ '+%.1f'|format(rat.tier_z) if rat.tier_z >= 0 else '%.1f'|format(rat.tier_z) }} SD)</span>
+  <span class="badge text-bg-dark" title="The tier this player's cross-tier skill projects into if everyone were re-sorted by ability. A model estimate.">Projects as: {{ rat.projected_tier }}</span>
+  {% if rat.overskilled %}
+    <span class="badge text-bg-warning" title="A within-tier outlier whose skill projects a tier higher - genuinely too good for this tier, not merely top of it.">&uarr; Overskilled for {{ rat.tier }}</span>
+  {% elif rat.underskilled %}
+    <span class="badge text-bg-info" title="Skill projects a tier lower than their current tier.">&darr; Below tier level</span>
+  {% endif %}
+  {% if role %}<span class="badge text-bg-dark" title="Dominant role from stat mix vs tier peers - goals {{ role.goals_pct }}th / assists {{ role.assists_pct }}th / saves {{ role.saves_pct }}th percentile.">Role: {{ role.role }}</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3 my-1">
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">MVPs</div><div class="h4 mb-0">{{ prof.mvp }}</div>
+    <div class="text-secondary small">{{ '%.0f'|format(prof.mvp_rate*100) }}% of games</div>
+  </div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">Shot %</div>
+    <div class="h4 mb-0">{{ '%.0f'|format(prof.sh_pct*100) if prof.sh_pct is not none else '-' }}%</div>
+  </div></div></div>
+</div>
+
+<h2 class="h5 mt-3">Per-game production <small class="text-secondary">(percentile within {{ prof.tier }})</small></h2>
+<table class="table mono">
+  <thead><tr><th>Stat</th><th>Per game</th><th>Total</th><th>Percentile in tier</th></tr></thead>
+  <tbody>
+  {% for s in prof.stats %}
+    <tr>
+      <td>{{ s.label }}</td>
+      <td>{{ s.per_game }}</td>
+      <td>{{ s.total }}</td>
+      <td style="min-width:220px;">
+        {% if s.pctile is not none %}
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+            <div style="height:16px;border-radius:3px;background:#4263eb;width:{{ s.pctile }}%;"></div>
+          </div>
+          <span style="width:42px;text-align:right;">{{ s.pctile }}th</span>
+        </div>
+        {% else %}-{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if ranks %}
+<h2 class="h5 mt-4">League ranking <small class="text-secondary">(per game, among {{ ranks.n_all }} players)</small></h2>
+<table class="table table-sm mono">
+  <thead><tr><th>Stat</th><th>Per game</th><th>Overall rank</th><th>Rank in {{ ranks.tier }}</th></tr></thead>
+  <tbody>
+  {% for rk in ranks.ranks %}
+    <tr>
+      <td>{{ rk.label }}</td><td>{{ rk.per_game }}</td>
+      <td>#{{ rk.overall }} <span class="text-secondary">/ {{ ranks.n_all }}</span></td>
+      <td>#{{ rk.tier_rank }} <span class="text-secondary">/ {{ ranks.n_tier }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if proj %}
+<div class="d-flex align-items-center gap-2 mt-4">
+  <h2 class="h5 mb-0">Season projection</h2>
+  {% set cc = {'High':'success','Medium':'warning','Low':'danger'} %}
+  <span class="badge text-bg-{{ cc[proj.confidence] }}">{{ proj.confidence }} confidence</span>
+</div>
+<p class="text-secondary small">
+  {{ proj.season_pct }}% of the season is played ({{ proj.gp }} &rarr; ~{{ proj.proj_gp }} games).
+  <strong>Projected</strong> uses <em>regression to the mean</em>: the current rate is blended with the
+  tier average (worth ~{{ proj.regress_k }} games), so small-sample hot/cold starts get pulled toward
+  normal until proven. <strong>Pace</strong> is the naive "keep current rate" number for comparison.
+  Range = 80% prediction interval.
+</p>
+<table class="table table-sm mono">
+  <thead><tr>
+    <th>Stat</th>
+    <th title="Total accumulated so far this season.">Now</th>
+    <th class="text-secondary" title="The tier's average per-game rate for this stat - the 'prior' the projection regresses toward.">Tier avg/g</th>
+    <th class="text-secondary" title="Naive projection: keep the current per-game rate for every remaining game.">Pace</th>
+    <th title="Regression-adjusted projection: blends the player's rate with the tier average (worth ~8 games) so small-sample hot/cold streaks pull toward normal.">Projected</th>
+    <th class="text-secondary" title="80% prediction interval - there's an ~80% chance the final total lands in this range.">80% range</th>
+  </tr></thead>
+  <tbody>
+  {% for pr in proj.projections %}
+    <tr>
+      <td>{{ pr.label }}</td>
+      <td>{{ pr.current }}</td>
+      <td class="text-secondary">{{ pr.tier_avg }}</td>
+      <td class="text-secondary">{{ pr.pace }}</td>
+      <td class="fw-semibold">{{ pr.proj }}</td>
+      <td class="text-secondary">{{ pr.low }} &ndash; {{ pr.high }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if adv %}
+<div class="d-flex align-items-center gap-2 mt-4">
+  <h2 class="h5 mb-0">Advanced stats <small class="text-secondary">(ballchasing)</small></h2>
+  {% if adv.adv_ovr is not none %}
+    <span class="badge text-bg-dark" title="Separate rating from ballchasing replay data (boost/speed/positioning/demos), weighted by what correlates with winning. Percentile among players with enough replays - NOT mixed into the box-score OVR.">Advanced OVR {{ adv.adv_ovr }} <span class="text-secondary">/100</span></span>
+  {% endif %}
+</div>
+<p class="text-secondary small">
+  From <strong>{{ adv.bc_games }}</strong> ballchasing replays (matches + scrims).
+  {% if adv.adv_ovr is not none %}Advanced OVR is a percentile among the {{ adv.pool_n }} players with enough replay data - separate from the box-score OVR above.{% else %}Not enough replays for an Advanced OVR yet.{% endif %}
+</p>
+<table class="table table-sm mono" style="max-width:520px;">
+  <tbody>
+  {% for m in adv.metrics %}
+    <tr>
+      <td>{{ m.label }}</td>
+      <td class="text-end fw-semibold">
+        {% if m.fmt == 'pct' %}{{ '%.1f'|format(m.value) }}%
+        {% else %}{{ '%.1f'|format(m.value) }}{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if prof.duplicate_entries > 1 %}
+  <p class="text-secondary small">Note: this name has {{ prof.duplicate_entries }} entries (e.g. a substitute in another tier); showing the most-played one.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

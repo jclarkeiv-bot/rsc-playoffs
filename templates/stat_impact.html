@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Stat Impact{% endblock %}
+{% block body %}
+<h1 class="h3">Which stats predict winning?</h1>
+<p class="text-secondary">
+  Each stat's correlation with a player's win rate (W/GP) across all
+  {{ '1,197' }} players. Higher = more associated with winning, and the bigger
+  its weight in the Overall Rating. This answers "is it more important to score
+  goals or make saves?"
+</p>
+<table class="table mono" style="max-width:640px;">
+  <thead><tr><th>Stat</th><th>Correlation with winning</th><th>Weight in OVR</th></tr></thead>
+  <tbody>
+  {% for s in imp %}
+    <tr>
+      <td class="fw-semibold">{{ s.stat }}</td>
+      <td style="min-width:240px;">
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+            <div style="height:16px;border-radius:3px;
+              background:{{ '#37b24d' if s.corr_with_winning >= 0 else '#a61e4d' }};
+              width:{{ (s.corr_with_winning|abs * 120)|round(0) }}%;"></div>
+          </div>
+          <span style="width:54px;text-align:right;">{{ '%+.2f'|format(s.corr_with_winning) }}</span>
+        </div>
+      </td>
+      <td>{{ '%.0f'|format(s.weight*100) }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">
+  Note: correlation isn't causation - e.g. saves often correlate weakly or
+  negatively with winning because trailing teams face more shots. Weights use
+  the positive part of each correlation (a stat that goes with losing doesn't
+  add to a skill rating).
+</p>
+
+{% if adv_imp %}
+<h2 class="h5 mt-4">Advanced stats vs winning <small class="text-secondary">(ballchasing, ~450 covered players)</small></h2>
+<table class="table mono" style="max-width:640px;">
+  <thead><tr><th>Advanced stat</th><th>Correlation with winning</th></tr></thead>
+  <tbody>
+  {% for s in adv_imp %}
+    <tr>
+      <td class="fw-semibold">{{ s.stat }}</td>
+      <td style="min-width:240px;">
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+            <div style="height:16px;border-radius:3px;
+              background:{{ '#37b24d' if s.corr >= 0 else '#a61e4d' }};
+              width:{{ (s.corr|abs * 300)|round(0) }}%;"></div>
+          </div>
+          <span style="width:54px;text-align:right;">{{ '%+.2f'|format(s.corr) }}</span>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">Insight: shooting %, attacking-third time, boost stealing and raw speed track winning; sitting at 0 boost and ball-chasing (low distance-to-ball) track losing.</p>
+{% endif %}
+{% endblock %}

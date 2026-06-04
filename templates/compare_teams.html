@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Compare Teams{% endblock %}
+{% block body %}
+<h1 class="h3">Compare Teams</h1>
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label small">Tier</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Team A</label>
+    <select name="a" class="form-select">
+      <option value="">-</option>
+      {% for t in teams %}<option value="{{ t }}" {{ 'selected' if t==a }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Team B</label>
+    <select name="b" class="form-select">
+      <option value="">-</option>
+      {% for t in teams %}<option value="{{ t }}" {{ 'selected' if t==b }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Compare</button></div>
+</form>
+
+{% if result %}
+<div class="row g-3">
+  <div class="col-md-5">
+    <table class="table mono">
+      <tr><th></th><th>{{ result.a }}</th><th>{{ result.b }}</th></tr>
+      <tr><td>Record</td><td>{{ result.record_a }}</td><td>{{ result.record_b }}</td></tr>
+      <tr><td>Elo</td><td>{{ result.elo_a }}</td><td>{{ result.elo_b }}</td></tr>
+    </table>
+  </div>
+  <div class="col-md-7">
+    <div class="alert alert-info">{{ result.summary }}</div>
+    {% if result.h2h %}
+      <div class="small text-secondary">Head-to-head this season:
+        {% for m in result.h2h %} MD{{ m.day }}: {{ m.a_games }}-{{ m.b_games }};{% endfor %}
+      </div>
+    {% else %}<div class="small text-secondary">No head-to-head meetings yet this season.</div>{% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  {% for nm, roster in [(result.a, roster_a), (result.b, roster_b)] %}
+  <div class="col-md-6">
+    <h2 class="h6">{{ nm }} roster</h2>
+    <table class="table table-sm mono">
+      <thead><tr><th>Player</th><th>OVR</th><th>Role</th><th>GP</th></tr></thead>
+      <tbody>
+      {% for p in roster %}
+        <tr>
+          <td><a href="{{ url_for('player', name=p.Player) }}">{{ p.Player }}</a></td>
+          <td>{{ p.OVR if p.OVR is not none else '-' }}</td>
+          <td>{{ p.role }}</td>
+          <td>{{ p.GP }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

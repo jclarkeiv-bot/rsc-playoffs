@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ tier }}{% endblock %}
+{% block body %}
+<h1 class="h3">{{ tier }} <small class="text-secondary">- top {{ k }} make playoffs</small></h1>
+<p class="text-secondary">
+  Regular season: <strong>{{ sched.played }}</strong> of <strong>{{ sched.total }}</strong> matches played
+  - <strong>{{ sched.left }}</strong> remaining ({{ sched.left * 4 }} games) before playoffs.
+</p>
+
+{% if champ %}
+{% set cc = {'High':'success','Medium':'warning','Low':'danger'} %}
+<div class="card mb-3 border-{{ cc[champ.conf] }}">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <span class="text-secondary small text-uppercase">Predicted champion</span>
+      <div class="h4 mb-0">🏆 {{ champ.team }}
+        <span class="badge text-bg-{{ cc[champ.conf] }} align-middle">{{ '%.0f'|format(champ.prob*100) }}% to win it all - {{ champ.conf }} confidence</span>
+      </div>
+    </div>
+    <div class="text-end small mono">
+      {% for t in title_board %}
+        <div>{{ '%.0f'|format(t.title_prob*100) }}% <a href="{{ url_for('team', tier=tier, team=t.team) }}">{{ t.team }}</a></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<p class="text-secondary small">Title odds simulate the seeded playoff bracket (Bo5 early rounds, Bo7 semis + final) on top of the regular-season sim.</p>
+{% endif %}
+<table class="table table-hover align-middle mono">
+  <thead>
+    <tr>
+      <th>#</th><th>Team</th><th>Record</th><th>Win%</th>
+      <th class="prob-cell" title="Share of 30,000 simulated seasons (remaining games played out with an Elo model) where this team finishes in the top-K playoff spots.">Playoff odds</th>
+      <th title="Share of simulations where the team wins the tier - regular season then a simulated seeded playoff bracket (Bo5 early, Bo7 semis+final).">Title %</th>
+      <th title="Average final seed across all simulations.">Avg seed</th><th>Status</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if r.rank <= k %} class="table-success-subtle"{% endif %}>
+      <td>{{ r.rank }}</td>
+      <td class="fw-semibold">{{ r.team }}</td>
+      <td>{{ r.record }}</td>
+      <td>{{ '%.3f'|format(r.wp) }}</td>
+      <td class="prob-cell">
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+            <div class="prob-bar" style="width: {{ (r.prob*100)|round(0) }}%; {% if r.prob < 0.15 %}background:#a61e4d;{% elif r.prob < 0.5 %}background:#e8590c;{% endif %}"></div>
+          </div>
+          <span style="width:46px;text-align:right;">{{ '%.0f'|format(r.prob*100) }}%</span>
+        </div>
+      </td>
+      <td class="mono">{{ '%.0f'|format(r.title*100) }}%</td>
+      <td>{{ '%.1f'|format(r.avg_seed) }}</td>
+      <td>
+        {% if r.clinched %}<span class="badge text-bg-success">CLINCHED</span>
+        {% elif r.eliminated %}<span class="badge text-bg-danger">ELIMINATED</span>
+        {% else %}<span class="badge text-bg-secondary">alive</span>{% endif %}
+      </td>
+      <td><a href="{{ url_for('team', tier=tier, team=r.team) }}" class="btn btn-sm btn-outline-light">details</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">Green = currently in a playoff spot. Odds are from 30,000 simulations of the remaining schedule.</p>
+
+{% if proj %}
+<h2 class="h5 mt-4">Projected final standings</h2>
+<p class="text-secondary small">Where each team is most likely to finish (simulation average record &amp; median seed). The line marks the top {{ k }} playoff cut.</p>
+<table class="table table-sm table-hover mono">
+  <thead><tr><th>#</th><th>Team</th><th>Proj. record</th><th>Proj. seed</th><th>Playoff odds</th><th>Title %</th></tr></thead>
+  <tbody>
+  {% for r in proj %}
+    {% if loop.index == k + 1 %}<tr><td colspan="6" class="p-0"><div style="border-top:2px dashed #e8590c"></div></td></tr>{% endif %}
+    <tr{% if r.proj_rank <= k %} class="table-success-subtle"{% endif %}>
+      <td>{{ r.proj_rank }}</td>
+      <td class="fw-semibold"><a href="{{ url_for('team', tier=tier, team=r.team) }}">{{ r.team }}</a></td>
+      <td>{{ r.proj_w }}-{{ r.proj_l }}</td>
+      <td>{{ r.proj_seed }}</td>
+      <td>{{ '%.0f'|format(r.prob*100) }}%</td>
+      <td>{{ '%.0f'|format(r.title*100) }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

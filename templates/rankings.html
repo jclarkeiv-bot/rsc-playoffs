@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Rankings{% endblock %}
+{% block body %}
+<h1 class="h3">Player Rankings</h1>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small">Tier</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Stat</label>
+    <select name="stat" class="form-select" onchange="this.form.submit()">
+      {% for key, meta in stat_opts.items() %}
+        <option value="{{ key }}" {{ 'selected' if key==stat }}>{{ meta[0] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Mode</label>
+    <select name="mode" class="form-select" onchange="this.form.submit()">
+      <option value="pg" {{ 'selected' if per_game }}>Per game</option>
+      <option value="total" {{ 'selected' if not per_game }}>Total</option>
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Go</button></div>
+</form>
+
+<p class="text-secondary small">
+  Top {{ rows|length }} by <strong>{{ stat_label }}</strong>
+  ({{ 'per game' if per_game else 'total' }}){{ ' - ' ~ tier if tier != 'all' }}.
+</p>
+
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>#</th><th>Player</th><th>Tier</th><th>Team</th><th>GP</th>
+    <th class="text-end">{{ stat_label }}{{ '/g' if per_game }}</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.rank }}</td>
+      <td><a href="{{ url_for('player', name=r.Player) }}" class="fw-semibold">{{ r.Player }}</a></td>
+      <td>{{ r.Tier }}</td>
+      <td><a href="{{ url_for('team', tier=r.Tier, team=r.Team) }}">{{ r.Team }}</a></td>
+      <td>{{ r.GP }}</td>
+      <td class="text-end">
+        {% if stat == 'SH%' %}{{ '%.1f'|format(r.value*100) }}%
+        {% elif per_game %}{{ '%.2f'|format(r.value) }}
+        {% else %}{{ r.value|int }}{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

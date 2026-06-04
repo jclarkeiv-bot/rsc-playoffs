@@ -1,0 +1,10 @@
+# secrets
+.ballchasing_token
+
+# python
+__pycache__/
+*.pyc
+
+# caches / data working files
+data/cache/
+data/bc_cache/

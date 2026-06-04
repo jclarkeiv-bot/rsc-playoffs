@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RSC Playoffs - {% block title %}{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .prob-bar { height: 18px; border-radius: 3px; background: #2b8a3e; }
+    .prob-cell { min-width: 140px; }
+    body { padding-bottom: 4rem; }
+    .mono { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">RSC Playoffs <span class="badge text-bg-secondary">{{ label }}</span></a>
+    <div class="navbar-nav me-auto">
+      <div class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Tiers</a>
+        <ul class="dropdown-menu">
+          {% for t in tiers %}<li><a class="dropdown-item" href="{{ url_for('tier', tier=t) }}">{{ t }}</a></li>{% endfor %}
+        </ul>
+      </div>
+      <a class="nav-link" href="{{ url_for('rankings') }}">Rankings</a>
+      <a class="nav-link" href="{{ url_for('projections') }}">Projections</a>
+      <a class="nav-link" href="{{ url_for('overskilled') }}">Overskilled</a>
+      <a class="nav-link" href="{{ url_for('stat_impact') }}">Stat Impact</a>
+      <a class="nav-link" href="{{ url_for('players_search') }}">Players</a>
+      <a class="nav-link" href="{{ url_for('cmp_teams') }}">Compare Teams</a>
+      <a class="nav-link" href="{{ url_for('cmp_players') }}">Compare Players</a>
+    </div>
+    <form class="d-flex" action="{{ url_for('players_search') }}" method="get">
+      <input class="form-control form-control-sm" type="search" name="q" placeholder="search player or team..." value="{{ request.args.get('q','') if request else '' }}">
+    </form>
+  </div>
+</nav>
+<div class="container">
+  {% block body %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

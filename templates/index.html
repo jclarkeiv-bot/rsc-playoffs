@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block body %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Playoff Picture - Season {{ label[1:] }}</h1>
+  {% if conf.sufficient %}
+    <span class="badge text-bg-success">Model: predictions enabled ({{ '%+.1f'|format(conf.logloss_skill_vs_coin*100) }}% skill vs coin)</span>
+  {% else %}
+    <span class="badge text-bg-warning" title="Early season - per-game signal is weak; odds shown are calibrated but uncertain.">Model: low-confidence (early season)</span>
+  {% endif %}
+</div>
+<p class="text-secondary">Pick a tier to see playoff odds, clinch/elimination math, and exactly what each team needs. Odds come from Elo-driven Monte Carlo over the real remaining schedule.</p>
+<div class="row g-3">
+  {% for t in tiers %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <a class="text-decoration-none" href="{{ url_for('tier', tier=t) }}">
+      <div class="card h-100 text-center">
+        <div class="card-body"><h5 class="card-title mb-0">{{ t }}</h5></div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

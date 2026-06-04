@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Compare Players{% endblock %}
+{% block body %}
+<h1 class="h3">Compare Players</h1>
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-auto">
+    <label class="form-label small">Player A</label>
+    <input name="a" list="names" class="form-control" value="{{ a or '' }}" placeholder="type a name">
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Player B</label>
+    <input name="b" list="names" class="form-control" value="{{ b or '' }}" placeholder="type a name">
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Compare</button></div>
+  <datalist id="names">{% for n in names %}<option value="{{ n }}">{% endfor %}</datalist>
+</form>
+
+{% if result %}
+<table class="table table-hover mono">
+  <thead><tr>
+    <th>Stat</th><th>{{ result.a }}</th><th>%ile</th>
+    <th>{{ result.b }}</th><th>%ile</th><th>Edge</th>
+  </tr></thead>
+  <tbody>
+  {% for row in result.rows %}
+    <tr>
+      <td>{{ row.stat }}</td>
+      <td>{{ row[result.a] }}</td>
+      <td class="text-secondary">{{ row[result.a ~ ' %ile'] }}</td>
+      <td>{{ row[result.b] }}</td>
+      <td class="text-secondary">{{ row[result.b ~ ' %ile'] }}</td>
+      <td>
+        {% if row.edge == result.a %}<span class="badge text-bg-primary">{{ result.a }}</span>
+        {% elif row.edge == result.b %}<span class="badge text-bg-info">{{ result.b }}</span>
+        {% else %}<span class="text-secondary">{{ row.edge }}</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p>Category edges - <strong>{{ result.a }}</strong>: {{ result.tally[result.a] }}
+   &nbsp; <strong>{{ result.b }}</strong>: {{ result.tally[result.b] }}
+   &nbsp; tie: {{ result.tally['tie'] }}</p>
+<p class="text-secondary small">Per-game stats; percentiles are within each player's own tier.</p>
+{% elif a or b %}
+  <div class="alert alert-warning">Couldn't find one of those players. Pick from the list.</div>
+{% endif %}
+{% endblock %}

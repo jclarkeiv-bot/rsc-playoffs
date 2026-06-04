@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Players{% endblock %}
+{% block body %}
+<h1 class="h3">Search players &amp; teams</h1>
+<form method="get" class="row g-2 mb-4" style="max-width:520px;">
+  <div class="col"><input name="q" class="form-control" value="{{ q }}" placeholder="type a player or team name" autofocus></div>
+  <div class="col-auto"><button class="btn btn-primary">Search</button></div>
+</form>
+
+{% if q and teams %}
+<h2 class="h5">Teams <span class="text-secondary">({{ teams|length }})</span></h2>
+<div class="d-flex flex-wrap gap-2 mb-4">
+  {% for t in teams %}
+    <a href="{{ url_for('team', tier=t.tier, team=t.team) }}" class="btn btn-outline-light btn-sm">
+      {{ t.team }} <span class="text-secondary">- {{ t.tier }}</span>
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if q and results %}
+<h2 class="h5">Players <span class="text-secondary">({{ results|length }}{% if results|length == 60 %}+{% endif %})</span></h2>
+{% endif %}
+{% if q and results %}
+<p class="text-secondary small">{{ results|length }} match(es){% if results|length == 60 %} (showing first 60){% endif %}</p>
+<table class="table table-hover mono">
+  <thead><tr><th>Player</th><th>Tier</th><th>Team</th><th>GP</th><th>Pts</th><th>G</th><th>A</th><th>Sv</th><th>MVP</th></tr></thead>
+  <tbody>
+  {% for p in results %}
+    <tr>
+      <td><a href="{{ url_for('player', name=p.Player) }}" class="fw-semibold">{{ p.Player }}</a></td>
+      <td>{{ p.Tier }}</td>
+      <td><a href="{{ url_for('team', tier=p.Tier, team=p.Team) }}">{{ p.Team }}</a></td>
+      <td>{{ p.GP }}</td><td>{{ p.Pts }}</td><td>{{ p.G }}</td>
+      <td>{{ p.A }}</td><td>{{ p.S }}</td><td>{{ p.MVP }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% elif q and not teams %}
+  <div class="alert alert-warning">No players or teams match "{{ q }}".</div>
+{% elif not q %}
+  <p class="text-secondary">Search by player or team name. Click a player for their stats and projection, or a team for its roster, odds, and clinch math.</p>
+{% endif %}
+{% endblock %}
