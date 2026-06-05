@@ -27,7 +27,15 @@ def players(refresh: bool = False) -> pd.DataFrame:
         _client = _client or RSCClient()
         _players = _client.player_stats()
         _rated = None
+        from . import store
+        store.save("players", _players)
     return _players
+
+
+def invalidate_ratings() -> None:
+    """Drop the cached ratings so they recompute (e.g. after a stats refresh)."""
+    global _rated
+    _rated = None
 
 
 def rated() -> pd.DataFrame:

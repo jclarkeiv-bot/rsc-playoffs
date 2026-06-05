@@ -7,6 +7,8 @@ Run:  python app.py    ->  http://127.0.0.1:5000
 """
 from __future__ import annotations
 
+import os
+import threading
 import time
 
 import numpy as np
@@ -55,7 +57,36 @@ def season():
             _sim_cache = {}
             profiles.players(refresh=True)
         _season, _season_ts = loaded, now
+    _maybe_refresh_advanced()
     return _season
+
+
+BC_REFRESH_INTERVAL = 18 * 3600    # rebuild ballchasing advanced stats ~daily
+_bc_refreshing = {"on": False}
+
+
+def _maybe_refresh_advanced():
+    """If the advanced-stats snapshot is stale, rebuild it in the background
+    (incremental + cached, so it only pulls newly-played matches)."""
+    from rsc import bc_harvest
+    csv = bc_harvest.CSV
+    age = (time.time() - os.path.getmtime(csv)) if csv.exists() else float("inf")
+    if _bc_refreshing["on"] or age < BC_REFRESH_INTERVAL:
+        return
+    _bc_refreshing["on"] = True
+
+    def work():
+        try:
+            from rsc import advanced
+            bc_harvest.build(players_df=profiles.players())
+            advanced.reload()
+            profiles.invalidate_ratings()
+        except Exception:
+            pass
+        finally:
+            _bc_refreshing["on"] = False
+
+    threading.Thread(target=work, daemon=True).start()
 
 
 def tier_sim(tier: str):

@@ -107,6 +107,10 @@ def load_live_season(label: str = "S26", client: RSCClient | None = None) -> Sea
         teams = _build_teams(api.standings())
     except Exception:
         teams = pd.DataFrame(columns=_TEAMS_COLS)
+    from . import store
+    store.save("matches", matches)
+    store.save("standings", teams)
+    store.save("variables", variables, dated=False)
     return Season(label=label, variables=variables, matches=matches, teams=teams)
 
 

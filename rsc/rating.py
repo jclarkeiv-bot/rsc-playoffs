@@ -18,6 +18,8 @@ distribution) is flagged as a promotion candidate - too good for their tier.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -27,21 +29,48 @@ from .ingest import TIER_ORDER
 # per-game contributions that feed the composite (Pts excluded: it's a function
 # of these, so including it would double-count)
 FEATURES = ["G/g", "A/g", "S/g", "SH/g", "DM/g", "SH%", "MVP/g"]
+# advanced ballchasing mechanics folded into OVR (coverage now ~all active players)
+ADV_FEATURES = ["boost_per_min", "avg_speed", "pct_supersonic", "boost_stolen",
+                "pct_offensive_third", "demos_inflicted"]
+_BC_CSV = Path(__file__).resolve().parent.parent / "data" / "bc_advanced.csv"
 MIN_GP = 4
 SHRINK_K = 8          # games of regression toward tier-average
 TIER_STEP = 1.5       # OVR boost per tier of difficulty (in dominance-z units)
 OVERSKILLED_PCT = 92  # top of tier's dominance distribution => promotion candidate
 
 
+def _merge_advanced(pool: pd.DataFrame) -> list[str]:
+    """Merge advanced mechanics onto the pool by player; fill gaps with the
+    tier average so uncovered players are neutral. Returns the columns added."""
+    if not _BC_CSV.exists():
+        return []
+    adv = pd.read_csv(_BC_CSV)
+    cols = [c for c in ADV_FEATURES if c in adv.columns]
+    if not cols:
+        return []
+    # one row per player (a name can appear in multiple tiers as a sub)
+    if "bc_games" in adv.columns:
+        adv = adv.sort_values("bc_games", ascending=False)
+    adv_u = adv.drop_duplicates("Player")[["Player"] + cols]
+    m = pool[["Player", "Tier"]].merge(adv_u, on="Player", how="left")
+    m.index = pool.index
+    for f in cols:
+        filled = m.groupby("Tier")[f].transform(lambda x: x.fillna(x.mean()))
+        pool[f] = filled.fillna(m[f].mean())
+    return cols
+
+
 def compute_ratings(players: pd.DataFrame) -> pd.DataFrame:
     df = _per_game(players).copy()
     df["MVP/g"] = df["MVP"] / df["GP"].replace(0, np.nan)
     pool = df[df["GP"] >= MIN_GP].copy()
+    adv_cols = _merge_advanced(pool)
+    feats = FEATURES + adv_cols
 
     # weights: correlation of each stat with winning, computed league-wide
     winrate = (pool["W"] / pool["GP"]).fillna(0.5)
     weights = {}
-    for f in FEATURES:
+    for f in feats:
         col = pool[f].astype(float).fillna(pool[f].mean())
         c = np.corrcoef(col, winrate)[0, 1]
         weights[f] = max(0.0, 0.0 if np.isnan(c) else c)
@@ -50,11 +79,11 @@ def compute_ratings(players: pd.DataFrame) -> pd.DataFrame:
 
     # standardize each feature WITHIN tier, then weight-combine
     ztier = pd.DataFrame(index=pool.index)
-    for f in FEATURES:
+    for f in feats:
         g = pool.groupby("Tier")[f]
         mean, sd = g.transform("mean"), g.transform("std").replace(0, np.nan)
         ztier[f] = ((pool[f] - mean) / sd).fillna(0.0)
-    dom = sum(ztier[f] * weights[f] for f in FEATURES)
+    dom = sum(ztier[f] * weights[f] for f in feats)
 
     # shrink small samples toward tier average (0)
     reliability = pool["GP"] / (pool["GP"] + SHRINK_K)

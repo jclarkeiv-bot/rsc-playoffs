@@ -23,7 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 TOKEN_FILE = ROOT / ".ballchasing_token"
 CACHE_DIR = ROOT / "data" / "bc_cache"
 MIN_INTERVAL = 0.55      # seconds between live calls (regular tier ~2/s)
-CACHE_TTL = 7 * 24 * 3600
+CACHE_TTL = 30 * 24 * 3600   # match replays are immutable once uploaded
+TRAVERSE_TTL = 6 * 3600      # group listings refresh often to find new matches
 
 _last_call = [0.0]
 
@@ -37,11 +38,12 @@ class Ballchasing:
     def _cache_path(self, url: str) -> Path:
         return CACHE_DIR / (hashlib.sha1(url.encode()).hexdigest()[:18] + ".json")
 
-    def _get(self, url: str) -> dict:
+    def _get(self, url: str, ttl: int | None = None) -> dict:
         if not url.startswith("http"):
             url = BASE + url
+        ttl = self.ttl if ttl is None else ttl
         cp = self._cache_path(url)
-        if cp.exists() and (time.time() - cp.stat().st_mtime) < self.ttl:
+        if cp.exists() and (time.time() - cp.stat().st_mtime) < ttl:
             return json.loads(cp.read_text(encoding="utf-8"))
         # rate limit
         wait = MIN_INTERVAL - (time.time() - _last_call[0])

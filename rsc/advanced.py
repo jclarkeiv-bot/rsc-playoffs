@@ -46,6 +46,11 @@ def _df() -> pd.DataFrame:
     return _cache["df"]
 
 
+def reload() -> None:
+    """Drop cached frames so a freshly rebuilt bc_advanced.csv is picked up."""
+    _cache.clear()
+
+
 def available() -> bool:
     return not _df().empty
 

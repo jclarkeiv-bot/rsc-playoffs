@@ -8,3 +8,5 @@ __pycache__/
 # caches / data working files
 data/cache/
 data/bc_cache/
+data/store/
+data/*.bak*
