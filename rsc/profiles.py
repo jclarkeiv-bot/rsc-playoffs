@@ -131,11 +131,12 @@ LEADERBOARD_STATS = {
 
 
 def leaderboard(tier: str = "all", stat: str = "OVR", per_game: bool = True,
-                limit: int = 100, df: pd.DataFrame | None = None) -> pd.DataFrame:
+                limit: int = 100, min_games: int = 1,
+                df: pd.DataFrame | None = None) -> pd.DataFrame:
     """Players ranked by a stat, optionally filtered to one tier and/or scored
-    per game. Returns columns: rank, Player, Tier, Team, GP, value."""
+    per game. `min_games` excludes players below that many games played."""
     src = _per_game(rated() if df is None else df)
-    src = src[src["GP"] >= 1]
+    src = src[src["GP"] >= max(min_games, 1)]
     if tier and tier != "all":
         src = src[src["Tier"] == tier]
     if stat not in LEADERBOARD_STATS:

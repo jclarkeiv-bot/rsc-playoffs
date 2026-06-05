@@ -96,11 +96,11 @@ def project_player(players: pd.DataFrame, variables: pd.DataFrame,
 
 
 def project_all(players: pd.DataFrame, variables: pd.DataFrame,
-                stat: str = "G") -> pd.DataFrame:
+                stat: str = "G", min_games: int = 1) -> pd.DataFrame:
     """Regression-adjusted projected FINAL totals for every player, for one
     counting stat. Used for projected stat-leader boards."""
     pg = _per_game(players).copy()
-    pg = pg[pg["GP"] >= 1]                      # drop never-played entries
+    pg = pg[pg["GP"] >= max(min_games, 1)]      # drop below the games threshold
     pg["MVP/g"] = pg["MVP"] / pg["GP"].replace(0, float("nan"))
     var = variables.set_index("tier")
     col_g = f"{stat}/g"

@@ -321,9 +321,12 @@ def rankings():
     tier = request.args.get("tier", "all")
     stat = request.args.get("stat", "Pts")
     per_game = request.args.get("mode", "pg") == "pg"
-    board = profiles.leaderboard(tier=tier, stat=stat, per_game=per_game, limit=100)
+    min_games = request.args.get("min_games", 1, type=int) or 1
+    board = profiles.leaderboard(tier=tier, stat=stat, per_game=per_game,
+                                 limit=100, min_games=min_games)
     return render_template("rankings.html", tiers=s.tiers, tier=tier, stat=stat,
-                           per_game=per_game, rows=board.to_dict("records"),
+                           per_game=per_game, min_games=min_games,
+                           rows=board.to_dict("records"),
                            stat_opts=profiles.LEADERBOARD_STATS,
                            stat_label=profiles.LEADERBOARD_STATS.get(stat, ("Points",))[0],
                            label=SEASON_LABEL)
@@ -340,12 +343,14 @@ def projections():
     stat = request.args.get("stat", "G")
     if stat not in _PROJ_STAT_OPTS:
         stat = "G"
-    board = project.project_all(profiles.players(), s.variables, stat)
+    min_games = request.args.get("min_games", 1, type=int) or 1
+    board = project.project_all(profiles.players(), s.variables, stat,
+                                min_games=min_games)
     if tier != "all":
         board = board[board["Tier"] == tier]
     return render_template("projections.html",
                            rows=board.head(60).to_dict("records"),
-                           tier=tier, stat=stat, stat_col=stat,
+                           tier=tier, stat=stat, stat_col=stat, min_games=min_games,
                            stat_opts=_PROJ_STAT_OPTS,
                            stat_label=_PROJ_STAT_OPTS[stat],
                            tiers=s.tiers, label=SEASON_LABEL)

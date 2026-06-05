@@ -16,6 +16,10 @@
       {% for k, lbl in stat_opts.items() %}<option value="{{ k }}" {{ 'selected' if k==stat }}>{{ lbl }}</option>{% endfor %}
     </select>
   </div>
+  <div class="col-auto">
+    <label class="form-label small" title="Only include players with at least this many games played.">Min games</label>
+    <input type="number" name="min_games" value="{{ min_games }}" min="1" max="40" class="form-control" style="width:6rem">
+  </div>
   <div class="col-auto"><button class="btn btn-primary">Go</button></div>
 </form>
 <p class="text-secondary small">Projected end-of-season {{ stat_label }} if the season finished today's pace, regressed toward each tier's average for fairness on small samples.</p>

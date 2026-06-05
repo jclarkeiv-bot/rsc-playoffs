@@ -25,6 +25,10 @@
       <option value="total" {{ 'selected' if not per_game }}>Total</option>
     </select>
   </div>
+  <div class="col-auto">
+    <label class="form-label small" title="Only include players with at least this many games played.">Min games</label>
+    <input type="number" name="min_games" value="{{ min_games }}" min="1" max="40" class="form-control" style="width:6rem">
+  </div>
   <div class="col-auto"><button class="btn btn-primary">Go</button></div>
 </form>
 
