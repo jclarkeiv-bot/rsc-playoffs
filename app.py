@@ -20,6 +20,7 @@ from rsc import profiles
 from rsc import project
 from rsc import rating
 from rsc import advanced
+from rsc import comps
 from rsc import balance as balance_mod
 from rsc.engine.clinch import build_tier_state, evaluate_team
 from rsc.engine.simulate import playoff_curve
@@ -81,6 +82,11 @@ def _maybe_refresh_advanced():
             bc_harvest.build(players_df=profiles.players())
             advanced.reload()
             profiles.invalidate_ratings()
+            try:                          # keep current-season comparables fresh
+                bc_harvest.harvest_season("S26")
+                comps.reload()
+            except Exception:
+                pass
         except Exception:
             pass
         finally:
@@ -227,8 +233,11 @@ def player(name):
     rat = rating.player_rating(pdf, name)
     adv = advanced.player_advanced(name)
     role = project.player_role(pdf, name)
+    history = comps.player_history(name) if comps.available() else []
+    comp = comps.find_comparables(name, "S26") if comps.available() else None
     return render_template("player.html", prof=prof, name=name, proj=proj,
                            ranks=ranks, rat=rat, adv=adv, role=role,
+                           history=history, comp=comp,
                            tiers=season().tiers, label=SEASON_LABEL)
 
 

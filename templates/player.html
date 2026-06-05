@@ -164,6 +164,41 @@
 <p class="text-secondary small">No ballchasing replay data for this player. Advanced stats (boost, speed, positioning, demos) only exist for the ~37% of players whose matches/scrims were uploaded to ballchasing - coverage depends on who uploads, not on the player.</p>
 {% endif %}
 
+{% if history and history|length > 1 %}
+<h2 class="h5 mt-4">Career history <small class="text-secondary">(season over season)</small></h2>
+<table class="table table-sm mono" style="max-width:640px;">
+  <thead><tr><th>Season</th><th>Tier</th><th>Games</th><th>Goals/g</th><th>Assists/g</th><th>Saves/g</th><th>Boost/min</th></tr></thead>
+  <tbody>
+  {% for h in history %}
+    <tr>
+      <td>{{ h.season }}</td><td>{{ h.tier }}</td><td>{{ h.games }}</td>
+      <td>{{ h.goals }}</td><td>{{ h.assists }}</td><td>{{ h.saves }}</td>
+      <td>{{ '%.0f'|format(h.boost_per_min) if h.boost_per_min else '-' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if comp and comp.comps %}
+<h2 class="h5 mt-4">Most similar players <small class="text-secondary">(across RSC history)</small></h2>
+<p class="text-secondary small">Nearest matches by per-game production &amp; play-style (goals, assists, saves, shots, boost, speed, positioning, demos), standardized across {{ comp.n_pool }} player-seasons. Lower distance = more similar.</p>
+<table class="table table-sm table-hover mono" style="max-width:720px;">
+  <thead><tr><th>Player</th><th>Season</th><th>Tier</th><th>Goals/g</th><th>Assists/g</th><th>Saves/g</th><th>Similarity</th></tr></thead>
+  <tbody>
+  {% for x in comp.comps %}
+    <tr>
+      <td>{% if x.season == 'S26' %}<a href="{{ url_for('player', name=x.Player) }}">{{ x.Player }}</a>{% else %}{{ x.Player }}{% endif %}</td>
+      <td>{{ x.season }}</td><td>{{ x.tier }}</td>
+      <td>{{ x.goals }}</td><td>{{ x.assists }}</td><td>{{ x.saves }}</td>
+      <td>{{ '%.2f'|format(x.dist) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">Descriptive comparables - cross-season stat scales can shift, and players who changed names between seasons won't link.</p>
+{% endif %}
+
 {% if prof.duplicate_entries > 1 %}
   <p class="text-secondary small">Note: this name has {{ prof.duplicate_entries }} entries (e.g. a substitute in another tier); showing the most-played one.</p>
 {% endif %}
