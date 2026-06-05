@@ -180,6 +180,27 @@
 </table>
 {% endif %}
 
+{% if fc and fc.rows %}
+<div class="d-flex align-items-center gap-2 mt-4">
+  <h2 class="h5 mb-0">Comparable-based outlook</h2>
+  {% set cc = {'High':'success','Medium':'warning','Low':'danger'} %}
+  <span class="badge text-bg-{{ cc[fc.confidence] }}">{{ fc.confidence }} confidence</span>
+</div>
+<p class="text-secondary small">Where the {{ fc.k }} most similar players from {{ fc.n_seasons }} completed past season(s) landed for each per-game stat (median + middle-50% range). A "players like you finished here" anchor that complements the pace projection above.</p>
+<table class="table table-sm mono" style="max-width:600px;">
+  <thead><tr><th>Stat</th><th>This season</th><th>Comparables median</th><th class="text-secondary">Typical range</th></tr></thead>
+  <tbody>
+  {% for r in fc.rows %}
+    <tr>
+      <td>{{ r.label }}</td><td>{{ r.current }}</td>
+      <td class="fw-semibold">{{ r.median }}</td>
+      <td class="text-secondary">{{ r.lo }} &ndash; {{ r.hi }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if comp and comp.comps %}
 <h2 class="h5 mt-4">Most similar players <small class="text-secondary">(across RSC history)</small></h2>
 <p class="text-secondary small">Nearest matches by per-game production &amp; play-style (goals, assists, saves, shots, boost, speed, positioning, demos), standardized across {{ comp.n_pool }} player-seasons. Lower distance = more similar.</p>

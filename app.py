@@ -235,9 +235,10 @@ def player(name):
     role = project.player_role(pdf, name)
     history = comps.player_history(name) if comps.available() else []
     comp = comps.find_comparables(name, "S26") if comps.available() else None
+    fc = comps.forecast(name) if comps.available() else None
     return render_template("player.html", prof=prof, name=name, proj=proj,
                            ranks=ranks, rat=rat, adv=adv, role=role,
-                           history=history, comp=comp,
+                           history=history, comp=comp, fc=fc,
                            tiers=season().tiers, label=SEASON_LABEL)
 
 

@@ -32,7 +32,10 @@ def available() -> bool:
 def load_pool(min_games: int = MIN_GAMES) -> pd.DataFrame:
     if "pool" not in _cache:
         frames = [pd.read_csv(f) for f in sorted(HIST.glob("*.csv"))]
-        _cache["pool"] = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        pool = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        if not pool.empty:                       # normalize tier names ("1Premier" -> "Premier")
+            pool["tier"] = pool["tier"].astype(str).str.replace(r"^\s*\d+\s*", "", regex=True)
+        _cache["pool"] = pool
     pool = _cache["pool"]
     return pool[pool["games"] >= min_games].copy() if not pool.empty else pool
 
@@ -78,6 +81,50 @@ def find_comparables(name: str, season: str = "S26", k: int = 10) -> dict | None
         "n_pool": len(pool), "comps": comps,
         "tightness": round(float(others["dist"].head(5).mean()), 2),
     }
+
+
+FORECAST_STATS = [("goals", "Goals/game"), ("assists", "Assists/game"),
+                  ("saves", "Saves/game"), ("shots", "Shots/game")]
+CURRENT_SEASON = "S26"
+
+
+def forecast(name: str, k: int = 25) -> dict | None:
+    """Comparable-based outlook: from the player's nearest analogs in COMPLETED
+    seasons (full, stable seasons), the median + inter-quartile range for each
+    per-game stat. A descriptive 'players like you finished here' range, not a
+    point forecast; confidence reflects how tight/numerous the analogs are."""
+    pool = load_pool()
+    if pool.empty:
+        return None
+    z, zcols = _zcols(pool)
+    tgt = z[(z["Player"].astype(str) == name) & (z["season"] == CURRENT_SEASON)]
+    if tgt.empty:
+        tgt = z[z["Player"].astype(str) == name]
+    if tgt.empty:
+        return None
+    t = tgt.sort_values("games", ascending=False).iloc[0]
+    past = z[z["season"] != CURRENT_SEASON].copy()      # completed seasons only
+    if len(past) < 10:
+        return None
+    M = past[zcols].fillna(0).to_numpy(dtype=float)
+    v = pd.to_numeric(t[zcols], errors="coerce").fillna(0).to_numpy(dtype=float)
+    past["dist"] = np.sqrt(((M - v) ** 2).sum(axis=1))
+    near = past.sort_values("dist").head(k)
+    rows = []
+    for col, label in FORECAST_STATS:
+        if col not in near:
+            continue
+        s = near[col].dropna()
+        rows.append({"label": label,
+                     "current": round(float(t[col]), 2) if col in t else None,
+                     "median": round(float(s.median()), 2),
+                     "lo": round(float(s.quantile(0.25)), 2),
+                     "hi": round(float(s.quantile(0.75)), 2)})
+    tightness = float(near["dist"].head(10).mean())
+    conf = ("High" if tightness < 1.5 and len(near) >= 20 else
+            "Medium" if tightness < 2.5 and len(near) >= 10 else "Low")
+    return {"name": t["Player"], "k": len(near), "confidence": conf,
+            "n_seasons": int(past["season"].nunique()), "rows": rows}
 
 
 def player_history(name: str) -> list[dict]:

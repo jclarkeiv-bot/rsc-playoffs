@@ -34,8 +34,15 @@ METRICS = [
 ]
 
 
-# season "Regular Season" group ids (from the official tree)
-SEASON_REG = {"S26": "season-26-zynncbqlcx", "S25": "regular-season-2yjqscawdj"}
+# season group ids (from the official tree); harvest auto-descends to Regular Season
+SEASON_REG = {
+    "S26": "season-26-zynncbqlcx", "S25": "season-25-rnrpfdu2kn",
+    "S24": "season-24-izbkvyjn02", "S23": "season-23-a4i5njgo4g",
+    "S22": "season-22-y61vh6vdcu", "S21": "season-21-6ull7qkld1",
+    "S20": "season-20-ik5n62p3lz", "S19": "season-19-h481hlr3wt",
+    "S18": "season-18-zaawe8k7qt", "S17": "season-17-jd9fbcprwb",
+    "S14": "season-14-24vu82iuxi", "S13": "season-13-hvk711vfn0",
+}
 HISTORY_DIR = ROOT / "data" / "history"
 
 # full per-player profile (per-game) for the comparables model
