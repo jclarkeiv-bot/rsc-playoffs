@@ -120,6 +120,58 @@ def project_all(players: pd.DataFrame, variables: pd.DataFrame,
     return out.sort_values("proj", ascending=False).reset_index(drop=True)
 
 
+_TEAM_STATS = [("Goals", "G"), ("Assists", "A"), ("Saves", "S"),
+               ("Shots", "SH"), ("Demos", "DM")]
+
+
+def project_team(players: pd.DataFrame, variables: pd.DataFrame,
+                 tier: str, team: str) -> dict | None:
+    """Project a team's final-season stat totals, same pace+regression approach
+    as players. Team production is summed across its players per team-game and
+    regressed toward the tier's average team."""
+    var = variables.set_index("tier")
+    if tier not in var.index:
+        return None
+    match_days = int(var.loc[tier, "match_days"])
+    mds_played = int(var.loc[tier, "mds_played"])
+    if mds_played <= 0:
+        return None
+    games_played = mds_played * 4          # team-games so far
+    games_total = match_days * 4
+    n_rem = max(games_total - games_played, 0)
+    season_frac = mds_played / match_days
+
+    active = players[(players["Tier"] == tier) & (players["GP"] >= 1)]
+    team_rows = active[active["Team"] == team]
+    if team_rows.empty:
+        return None
+    # tier average team production per team-game (for the regression prior)
+    tier_team_tot = active.groupby("Team")
+
+    projections = []
+    for label, col in _TEAM_STATS:
+        total = float(team_rows[col].sum())
+        r = total / games_played
+        mu = float((tier_team_tot[col].sum() / games_played).mean())
+        r_adj = (games_played * r + REGRESS_K * mu) / (games_played + REGRESS_K)
+        pace = total + r * n_rem
+        proj = total + r_adj * n_rem
+        se = math.sqrt(r_adj / (games_played + REGRESS_K)) if r_adj > 0 else 0.0
+        sd = math.sqrt(n_rem * r_adj + (n_rem * se) ** 2)
+        projections.append({
+            "label": label, "current": int(total),
+            "per_game": round(r, 2), "tier_avg": round(mu, 2),
+            "pace": round(pace), "proj": round(proj),
+            "low": round(max(total, proj - _Z80 * sd)), "high": round(proj + _Z80 * sd),
+        })
+    return {
+        "tier": tier, "team": team,
+        "season_pct": round(season_frac * 100),
+        "confidence": _confidence(season_frac, games_played, games_played),
+        "projections": projections,
+    }
+
+
 # role classification from a player's stat mix vs tier peers
 _ROLE_STATS = [("G/g", "Striker"), ("A/g", "Playmaker"), ("S/g", "Anchor")]
 

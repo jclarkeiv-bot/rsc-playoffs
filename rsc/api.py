@@ -27,7 +27,7 @@ BASE = "https://api.rscna.com"
 UA = "rsc-playoffs/0.1 (personal analytics tool; contact: local user)"
 PER_PAGE = 100
 CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "cache"
-CACHE_TTL = 6 * 3600  # seconds
+CACHE_TTL = 3600  # seconds (hourly refresh - fresh but polite)
 
 
 class RSCClient:

@@ -7,6 +7,8 @@ Run:  python app.py    ->  http://127.0.0.1:5000
 """
 from __future__ import annotations
 
+import time
+
 import numpy as np
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for
@@ -24,15 +26,35 @@ from rsc.engine.compare import compare_players, compare_teams
 app = Flask(__name__)
 
 SEASON_LABEL = "S26"
+LIVE_DATA = True            # pull standings/schedule live from rscna.com
+SEASON_TTL = 3600           # rebuild the live season at most hourly
+DATA_SOURCE = "xlsx snapshot"
 _season = None
+_season_ts = 0.0
 _sim_cache: dict[str, object] = {}
-_players_cache = None
 
 
 def season():
-    global _season
-    if _season is None:
-        _season = P.load(SEASON_LABEL)
+    """Current season. Live from rscna.com (hourly), falling back to the xlsx
+    snapshot if the API is unreachable."""
+    global _season, _season_ts, _sim_cache, DATA_SOURCE
+    now = time.time()
+    if _season is None or (now - _season_ts) > SEASON_TTL:
+        loaded = None
+        if LIVE_DATA:
+            try:
+                from rsc import live
+                loaded = live.load_live_season(SEASON_LABEL)
+                DATA_SOURCE = "live (rscna.com)"
+            except Exception:
+                loaded = None
+        if loaded is None:
+            loaded = P.load(SEASON_LABEL)
+            DATA_SOURCE = "xlsx snapshot"
+        if _season is not None:           # data refreshed -> drop stale caches
+            _sim_cache = {}
+            profiles.players(refresh=True)
+        _season, _season_ts = loaded, now
     return _season
 
 
@@ -44,6 +66,11 @@ def tier_sim(tier: str):
 
 def players_df():
     return profiles.players()
+
+
+@app.context_processor
+def inject_data_source():
+    return {"data_source": DATA_SOURCE}
 
 
 @app.route("/")
@@ -144,12 +171,17 @@ def team(tier, team):
         summ = sim.summary().set_index("team")
         if team in summ.index:
             tmeta["proj_final_w"] = round(float(summ.loc[team, "avg_final_w"]), 1)
+            total_games = int(s.variables.set_index("tier").loc[tier, "match_days"]) * 4
+            tmeta["proj_final_l"] = total_games - int(round(summ.loc[team, "avg_final_w"]))
     except Exception:
         pass
 
+    team_proj = project.project_team(profiles.players(), s.variables, tier, team)
+
     return render_template("team.html", o=o, tier=tier, chart=chart,
                            tiers=s.tiers, label=SEASON_LABEL,
-                           roster=roster_rows, totals=totals, tmeta=tmeta)
+                           roster=roster_rows, totals=totals, tmeta=tmeta,
+                           team_proj=team_proj)
 
 
 @app.route("/player/<path:name>")

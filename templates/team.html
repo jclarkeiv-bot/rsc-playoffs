@@ -54,6 +54,39 @@
 <p class="text-secondary small">Each point: the probability of making the playoffs if the season ends with that many total wins (from simulating everyone else's remaining games).</p>
 <canvas id="curve" height="110"></canvas>
 
+{% if team_proj %}
+<div class="d-flex align-items-center gap-2 mt-4">
+  <h2 class="h5 mb-0">Season projection</h2>
+  {% set cc = {'High':'success','Medium':'warning','Low':'danger'} %}
+  <span class="badge text-bg-{{ cc[team_proj.confidence] }}">{{ team_proj.confidence }} confidence</span>
+</div>
+<p class="text-secondary small">
+  {{ team_proj.season_pct }}% of the season is played.
+  {% if tmeta.proj_final_w is defined %}<strong>Projected final record: {{ tmeta.proj_final_w }}&ndash;{{ tmeta.proj_final_l }}</strong> (simulation average). {% endif %}
+  Stat totals below are scaled to a full season and regressed toward the tier's average team, same method as the player projections.
+</p>
+<table class="table table-sm mono" style="max-width:680px;">
+  <thead><tr>
+    <th>Stat</th><th>Now</th>
+    <th class="text-secondary" title="Tier's average team per game">Tier avg/g</th>
+    <th class="text-secondary" title="Keep current per-game rate">Pace</th>
+    <th title="Regression-adjusted projection">Projected</th>
+    <th class="text-secondary">80% range</th>
+  </tr></thead>
+  <tbody>
+  {% for pr in team_proj.projections %}
+    <tr>
+      <td>{{ pr.label }}</td><td>{{ pr.current }}</td>
+      <td class="text-secondary">{{ pr.tier_avg }}</td>
+      <td class="text-secondary">{{ pr.pace }}</td>
+      <td class="fw-semibold">{{ pr.proj }}</td>
+      <td class="text-secondary">{{ pr.low }} &ndash; {{ pr.high }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
 {% if roster %}
 <h2 class="h5 mt-4">Roster &amp; player stats</h2>
 {% if totals %}
