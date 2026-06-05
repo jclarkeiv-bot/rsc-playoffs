@@ -21,8 +21,8 @@
 <p class="text-secondary small">Projected end-of-season {{ stat_label }} if the season finished today's pace, regressed toward each tier's average for fairness on small samples.</p>
 <table class="table table-hover table-sm mono">
   <thead><tr>
-    <th>#</th><th>Player</th><th>Tier</th><th>Team</th><th>GP</th>
-    <th>{{ stat_label }} now</th><th>{{ stat_label }}/g</th><th>Projected final</th>
+    <th>#</th><th>Player</th><th>Tier</th><th>Team</th><th title="Games Played">Games</th>
+    <th>{{ stat_label }} now</th><th>{{ stat_label }} / game</th><th>Projected final</th>
   </tr></thead>
   <tbody>
   {% for r in rows %}

@@ -163,6 +163,18 @@ def best_overall(players: pd.DataFrame, tier: str = "all",
               "overskilled"]].reset_index(drop=True)
 
 
+def tier_misplaced(players: pd.DataFrame, tier: str):
+    """Players in `tier` whose cross-tier skill projects them up or down."""
+    r = compute_ratings(players)
+    r = r[r["Tier"] == tier]
+    cols = ["Player", "Team", "GP", "OVR", "tier_z", "tier_pct", "projected_tier"]
+    up = (r[r["tier_delta"] > 0].sort_values("tier_z", ascending=False)[cols]
+          .to_dict("records"))
+    down = (r[r["tier_delta"] < 0].sort_values("tier_z")[cols]
+            .to_dict("records"))
+    return up, down
+
+
 def overskilled_candidates(players: pd.DataFrame, limit: int = 80) -> pd.DataFrame:
     """Players who project ABOVE their current tier (and are within-tier
     outliers) - genuinely too good for their tier, not just 'best in tier'."""

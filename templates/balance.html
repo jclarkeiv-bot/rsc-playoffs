@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Tier Balance{% endblock %}
+{% block body %}
+<h1 class="h3">Tier balance</h1>
+<p class="text-secondary">
+  Are players sorted into the right tiers? We can't measure this perfectly - the league's
+  real tool is matchmaking rating, which we don't have, and teams only play within their own
+  tier - so this combines the two best signals we do have.
+</p>
+
+{% for line in d.verdict %}
+  <div class="alert alert-secondary py-2">{{ line }}</div>
+{% endfor %}
+
+<h2 class="h5 mt-4">1. Skill separation between tiers <small class="text-secondary">(from replay mechanics)</small></h2>
+<p class="text-secondary small">
+  Mechanics (speed, boost control, positioning) barely depend on the opponent, so they compare
+  fairly across tiers. "Average skill" should fall steadily from the top tier down; "Overlap with
+  tier below" is the share of the next-lower tier whose mechanics already beat this tier's median -
+  a high number means the two tiers blur together. Covers the
+  {{ d.separation.n_covered }} players who have ballchasing replay data.
+</p>
+{% if d.separation.available %}
+<table class="table table-sm mono" style="max-width:640px;">
+  <thead><tr><th>Tier</th><th>Players measured</th><th>Average skill</th><th>Overlap with tier below</th></tr></thead>
+  <tbody>
+  {% for r in d.separation.rows %}
+    <tr>
+      <td class="fw-semibold">{{ r.tier }}</td>
+      <td>{{ r.n if r.n else '-' }}</td>
+      <td>{{ r.mean if r.mean is not none else '(too few to measure)' }}</td>
+      <td>
+        {% if r.overlap_below is not none %}
+          {{ r.overlap_below }}%
+          {% if r.overlap_below >= 40 %}<span class="badge text-bg-danger" title="High overlap (40% or more): a large share of the tier below already out-performs this tier's typical (median) player, so the boundary between these two tiers is fuzzy - they blur together.">blurry line</span>
+          {% elif r.overlap_below <= 22 %}<span class="badge text-bg-success" title="Low overlap (22% or less): few players in the tier below reach this tier's typical (median) level, so these two tiers are cleanly separated by skill.">clean line</span>{% endif %}
+        {% else %}-{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">Tiers are ordered correctly (rank correlation {{ d.separation.order_corr }}; nearer -1 is a cleaner top-to-bottom ordering), with an average boundary overlap of about {{ d.separation.avg_overlap }}%. Note: the top tier has no replay data, so it isn't measured here.</p>
+{% else %}
+  <div class="alert alert-warning">Not enough replay data to measure mechanical separation.</div>
+{% endif %}
+
+<h2 class="h5 mt-4">2. Players who look misplaced <small class="text-secondary">(full roster, skill model)</small></h2>
+<p class="text-secondary small">
+  Re-sorting every player by overall skill into the tiers' current sizes, how many would land in a
+  different tier? "Move up / down" counts players whose skill points to a higher or lower tier;
+  "Churn" is the share of the tier that looks misplaced. This is a model estimate (it assumes a fixed
+  skill gap between tiers), so read it as a strong hint, not a verdict.
+</p>
+<table class="table table-sm mono" style="max-width:680px;">
+  <thead><tr><th>Tier</th><th>Players</th><th>Would move up</th><th>Would move down</th><th>Stay</th><th>Churn</th></tr></thead>
+  <tbody>
+  {% for r in d.movement.rows %}
+    <tr>
+      <td class="fw-semibold"><a href="{{ url_for('balance_tier', tier=r.tier) }}" title="See the {{ r.tier }} players flagged as misplaced">{{ r.tier }}</a></td>
+      <td>{{ r.n }}</td>
+      <td>{{ r.up or '-' }}</td>
+      <td>{{ r.down or '-' }}</td>
+      <td>{{ r.stay }}</td>
+      <td style="min-width:160px;">
+        <div class="d-flex align-items-center gap-2">
+          <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+            <div style="height:14px;border-radius:3px;background:{{ '#e8590c' if r.churn>=12 else '#4263eb' }};width:{{ (r.churn*4)|round(0) }}%;"></div>
+          </div>
+          <span style="width:38px;text-align:right;">{{ r.churn }}%</span>
+        </div>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">Overall, {{ d.movement.moved }} of {{ d.movement.total }} measured players ({{ d.movement.churn }}%) sit in a tier their skill doesn't match - a low number means the league is well sorted.</p>
+{% endblock %}

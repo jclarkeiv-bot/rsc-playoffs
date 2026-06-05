@@ -20,6 +20,11 @@ PLAYER_STATS = {
     "S": (True, True), "SH": (True, True), "DM": (True, True),
     "SH%": (False, True), "MVP": (True, True),
 }
+_STAT_LABEL = {
+    "Pts": "Points / game", "G": "Goals / game", "A": "Assists / game",
+    "S": "Saves / game", "SH": "Shots / game", "DM": "Demos / game",
+    "SH%": "Shooting %", "MVP": "MVPs / game",
+}
 
 
 # ---- players -----------------------------------------------------------------
@@ -40,6 +45,10 @@ class PlayerComparison:
     b: str
     rows: list          # per-stat dicts
     tally: dict         # {a: n_wins, b: n_wins, tie: n}
+    gp_a: int = 0       # games played
+    gp_b: int = 0
+    tier_a: str = ""
+    tier_b: str = ""
 
     def to_frame(self) -> pd.DataFrame:
         return pd.DataFrame(self.rows)
@@ -71,14 +80,16 @@ def compare_players(players: pd.DataFrame, name_a: str, name_b: str
             winner = name_a if (va > vb) == higher_better else name_b
             edge = winner; tally[winner] += 1
         rows.append({
-            "stat": key,
+            "stat": _STAT_LABEL.get(stat, key),
             name_a: round(float(va), 3) if pd.notna(va) else None,
             f"{name_a} %ile": pa,
             name_b: round(float(vb), 3) if pd.notna(vb) else None,
             f"{name_b} %ile": pb,
             "edge": edge,
         })
-    return PlayerComparison(name_a, name_b, rows, tally)
+    return PlayerComparison(name_a, name_b, rows, tally,
+                            gp_a=int(ra["GP"]), gp_b=int(rb["GP"]),
+                            tier_a=str(ra["Tier"]), tier_b=str(rb["Tier"]))
 
 
 def _pctile(df, tier, col, val) -> int | None:

@@ -37,6 +37,15 @@
   {% endif %}
   {% if role %}<span class="badge text-bg-dark" title="Dominant role from stat mix vs tier peers - goals {{ role.goals_pct }}th / assists {{ role.assists_pct }}th / saves {{ role.saves_pct }}th percentile.">Role: {{ role.role }}</span>{% endif %}
 </div>
+<details class="mt-2 small text-secondary" style="max-width:760px;">
+  <summary style="cursor:pointer;">How are these calculated?</summary>
+  <div class="mt-2">
+    <p class="mb-1"><strong>Composite</strong>: each per-game stat (goals, assists, saves, shots, demos, shooting %, MVPs) is turned into a z-score <em>vs the player's tier peers</em>, weighted by how much it correlates with winning, summed, then shrunk toward the tier average for small samples (games / (games + 8)).</p>
+    <p class="mb-1"><strong>Tier dominance</strong>: that composite expressed two ways - a <em>percentile</em> within the tier (rank), and a <em>margin</em> in standard deviations above the tier average (how big an outlier). The margin is what flags genuine outliers vs. someone merely top of a tight tier.</p>
+    <p class="mb-1"><strong>Overall rating (0-100)</strong>: the composite plus a tier-strength bonus (Premier counts most), turned into a league-wide percentile - so it's comparable across tiers, unlike tier dominance.</p>
+    <p class="mb-0"><strong>Projects as</strong>: re-sorting every player by overall skill into the tiers' real sizes, the tier this player would land in. Projecting up a tier (and being an outlier) = "overskilled." A model estimate.</p>
+  </div>
+</details>
 {% endif %}
 
 <div class="row g-3 my-1">

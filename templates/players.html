@@ -24,7 +24,7 @@
 {% if q and results %}
 <p class="text-secondary small">{{ results|length }} match(es){% if results|length == 60 %} (showing first 60){% endif %}</p>
 <table class="table table-hover mono">
-  <thead><tr><th>Player</th><th>Tier</th><th>Team</th><th>GP</th><th>Pts</th><th>G</th><th>A</th><th>Sv</th><th>MVP</th></tr></thead>
+  <thead><tr><th>Player</th><th>Tier</th><th>Team</th><th>Games</th><th>Points</th><th>Goals</th><th>Assists</th><th>Saves</th><th>MVPs</th></tr></thead>
   <tbody>
   {% for p in results %}
     <tr>

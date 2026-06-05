@@ -10,6 +10,20 @@
     .prob-cell { min-width: 140px; }
     body { padding-bottom: 4rem; }
     .mono { font-variant-numeric: tabular-nums; }
+    /* JS-FREE hover menus: no Bootstrap dropdown plugin, so nothing attaches
+       global click handlers that could interfere with page form controls. */
+    .navmenu { position: relative; }
+    .navmenu > .submenu {
+      display: none; position: absolute; top: 100%; left: 0; z-index: 1050;
+      min-width: 12rem; margin: 0; padding: .35rem 0; list-style: none;
+      background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+      border-radius: .375rem; box-shadow: 0 .5rem 1rem rgba(0,0,0,.3);
+    }
+    .navmenu:hover > .submenu, .navmenu:focus-within > .submenu { display: block; }
+    .submenu a { display: block; padding: .35rem 1rem; white-space: nowrap;
+      color: var(--bs-body-color); text-decoration: none; }
+    .submenu a:hover { background: var(--bs-tertiary-bg); }
+    .submenu-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; }
   </style>
 </head>
 <body>
@@ -17,19 +31,37 @@
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">RSC Playoffs <span class="badge text-bg-secondary">{{ label }}</span></a>
     <div class="navbar-nav me-auto">
-      <div class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Tiers</a>
-        <ul class="dropdown-menu">
-          {% for t in tiers %}<li><a class="dropdown-item" href="{{ url_for('tier', tier=t) }}">{{ t }}</a></li>{% endfor %}
+      <div class="nav-item navmenu">
+        <a class="nav-link dropdown-toggle" href="#" role="button">Tiers</a>
+        <ul class="submenu submenu-cols">
+          {% for t in tiers %}<li><a href="{{ url_for('tier', tier=t) }}">{{ t }}</a></li>{% endfor %}
         </ul>
       </div>
-      <a class="nav-link" href="{{ url_for('rankings') }}">Rankings</a>
-      <a class="nav-link" href="{{ url_for('projections') }}">Projections</a>
-      <a class="nav-link" href="{{ url_for('overskilled') }}">Overskilled</a>
-      <a class="nav-link" href="{{ url_for('stat_impact') }}">Stat Impact</a>
-      <a class="nav-link" href="{{ url_for('players_search') }}">Players</a>
-      <a class="nav-link" href="{{ url_for('cmp_teams') }}">Compare Teams</a>
-      <a class="nav-link" href="{{ url_for('cmp_players') }}">Compare Players</a>
+      <div class="nav-item navmenu">
+        <a class="nav-link dropdown-toggle" href="#" role="button">Players</a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('rankings') }}">Player Rankings</a></li>
+          <li><a href="{{ url_for('projections') }}">Projected Leaders</a></li>
+          <li><a href="{{ url_for('overskilled') }}">Overskilled</a></li>
+          <li><a href="{{ url_for('players_search') }}">Search Players</a></li>
+          <li><a href="{{ url_for('cmp_players') }}">Compare Players</a></li>
+        </ul>
+      </div>
+      <div class="nav-item navmenu">
+        <a class="nav-link dropdown-toggle" href="#" role="button">Teams</a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('team_rankings') }}">Team Rankings</a></li>
+          <li><a href="{{ url_for('matches') }}">Matches</a></li>
+          <li><a href="{{ url_for('cmp_teams') }}">Compare Teams</a></li>
+        </ul>
+      </div>
+      <div class="nav-item navmenu">
+        <a class="nav-link dropdown-toggle" href="#" role="button">Insights</a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('tier_balance') }}">Tier Balance</a></li>
+          <li><a href="{{ url_for('stat_impact') }}">Stat Impact</a></li>
+        </ul>
+      </div>
     </div>
     <form class="d-flex" action="{{ url_for('players_search') }}" method="get">
       <input class="form-control form-control-sm" type="search" name="q" placeholder="search player or team..." value="{{ request.args.get('q','') if request else '' }}">

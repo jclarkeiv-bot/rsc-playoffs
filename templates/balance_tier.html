@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ tier }} balance{% endblock %}
+{% block body %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{{ url_for('tier_balance') }}">Tier Balance</a></li>
+  <li class="breadcrumb-item active">{{ tier }}</li>
+</ol></nav>
+<h1 class="h3">{{ tier }} - misplaced players</h1>
+<p class="text-secondary">
+  Players in {{ tier }} whose overall skill points to a different tier.
+  "Tier dominance" is how many standard deviations above the tier average they sit;
+  "Projects to" is where their cross-tier skill would place them. A model estimate.
+</p>
+
+{% macro tbl(rows, dir_label) %}
+<table class="table table-sm table-hover mono">
+  <thead><tr>
+    <th>Player</th><th>Team</th><th title="Games Played">Games</th>
+    <th title="Overall Rating (0-100): league percentile of cross-tier skill.">Overall</th>
+    <th title="Standard deviations above (or below) the tier average on the composite rating.">Tier dominance</th>
+    <th title="The tier this player's skill projects into if everyone were re-sorted by ability.">Projects to</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="fw-semibold"><a href="{{ url_for('player', name=r.Player) }}">{{ r.Player }}</a></td>
+      <td><a href="{{ url_for('team', tier=tier, team=r.Team) }}">{{ r.Team }}</a></td>
+      <td>{{ r.GP }}</td>
+      <td>{{ r.OVR|int }}</td>
+      <td>{{ '%+.1f'|format(r.tier_z) }} SD <span class="text-secondary">({{ r.tier_pct|int }}th)</span></td>
+      <td><span class="badge {{ 'text-bg-warning' if dir_label=='up' else 'text-bg-info' }}">{{ '&uarr;'|safe if dir_label=='up' else '&darr;'|safe }} {{ r.projected_tier }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+<h2 class="h5 mt-3">Overskilled - project to a higher tier <span class="text-secondary">({{ up|length }})</span></h2>
+{% if up %}{{ tbl(up, 'up') }}{% else %}<p class="text-secondary">None.</p>{% endif %}
+
+<h2 class="h5 mt-4">Underskilled - project to a lower tier <span class="text-secondary">({{ down|length }})</span></h2>
+{% if down %}{{ tbl(down, 'down') }}{% else %}<p class="text-secondary">None.</p>{% endif %}
+{% endblock %}

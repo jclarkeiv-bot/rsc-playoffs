@@ -10,6 +10,7 @@
   {% endif %}
 </div>
 <p class="text-secondary">Pick a tier to see playoff odds, clinch/elimination math, and exactly what each team needs. Odds come from Elo-driven Monte Carlo over the real remaining schedule.</p>
+{% if counts %}<p class="text-secondary small"><strong>{{ counts.played }}</strong> of {{ counts.total }} rostered players have appeared in a game this season. Player lists show only players who have played.</p>{% endif %}
 <div class="row g-3">
   {% for t in tiers %}
   <div class="col-6 col-md-4 col-lg-3">

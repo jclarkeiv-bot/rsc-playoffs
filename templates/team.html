@@ -29,12 +29,12 @@
     <div class="fw-semibold">{{ val if val is not none else '-' }}</div>
   </div></div></div>
   {% endmacro %}
-  {{ metric('Proj. final wins', tmeta.proj_final_w, 'Average final game-wins across 30,000 simulations of the remaining schedule.') }}
-  {{ metric('RPI', tmeta.rpi, 'Ratings Percentage Index from the league sheet: blends win% with opponent strength.') }}
-  {{ metric('SOS played', tmeta.past_sos, 'Strength of schedule already played: average win% of opponents faced so far.') }}
-  {{ metric('SOS remaining', tmeta.fut_sos, 'Strength of remaining schedule: average win% of opponents still to play.') }}
-  {{ metric('Last 5', tmeta.last5, 'Record over the last 5 matches (from the league sheet).') }}
-  {{ metric('League magic #', tmeta.sheet_magic, 'The league standings sheet own magic number to clinch a playoff spot.') }}
+  {{ metric('Projected final wins', tmeta.proj_final_w, 'Average final game-wins across 30,000 simulations of the remaining schedule.') }}
+  {{ metric('Rating index', tmeta.rpi, 'Ratings Percentage Index (RPI) from the league sheet: blends win percentage with opponent strength.') }}
+  {{ metric('Schedule strength (played)', tmeta.past_sos, 'Average win percentage of the opponents faced so far.') }}
+  {{ metric('Schedule strength (remaining)', tmeta.fut_sos, 'Average win percentage of the opponents still to play.') }}
+  {{ metric('Last 5 matches', tmeta.last5, 'Record over the last 5 matches (from the league sheet).') }}
+  {{ metric('Magic number to clinch', tmeta.sheet_magic, 'The league standings sheet own magic number to clinch a playoff spot.') }}
 </div>
 <p class="text-secondary small">RPI / strength-of-schedule (opponents' win %) and the league's own magic number, straight from the standings sheet. Projected final wins is the simulation average.</p>
 {% endif %}
@@ -66,8 +66,10 @@
 {% endif %}
 <table class="table table-sm table-hover mono">
   <thead><tr>
-    <th>Player</th><th>GP</th><th>Pts/g</th><th>G/g</th><th>A/g</th>
-    <th>Sv/g</th><th>Sh/g</th><th>SH%</th><th>MVP</th><th></th>
+    <th>Player</th><th>Games</th><th title="Points per game">Points/g</th>
+    <th title="Goals per game">Goals/g</th><th title="Assists per game">Assists/g</th>
+    <th title="Saves per game">Saves/g</th><th title="Shots per game">Shots/g</th>
+    <th title="Shooting percentage = goals / shots">Shooting %</th><th>MVPs</th><th></th>
   </tr></thead>
   <tbody>
   {% for p in roster %}

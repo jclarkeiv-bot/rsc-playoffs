@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Team Rankings{% endblock %}
+{% block body %}
+<h1 class="h3">Team Rankings</h1>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small">Tier</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Rank by</label>
+    <select name="metric" class="form-select" onchange="this.form.submit()">
+      {% for k, meta in metric_opts.items() %}<option value="{{ k }}" {{ 'selected' if k==metric }}>{{ meta[0] }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Go</button></div>
+</form>
+<p class="text-secondary small">
+  Ranked by <strong>{{ metric_label }}</strong>{{ ' - ' ~ tier if tier != 'all' }}.
+  {{ metric_opts[metric][1] }}
+  {% if metric in ['wp','goals_pg','saves_pg','assists_pg'] and tier == 'all' %}
+  <br>Note: this metric is tier-relative, so comparing across tiers isn't apples-to-apples - pick a tier, or rank by "Avg player rating" for a fair cross-tier comparison.
+  {% endif %}
+</p>
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>#</th><th>Team</th><th>Tier</th><th>Record</th>
+    <th class="text-end">{{ metric_label }}</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.rank }}</td>
+      <td class="fw-semibold"><a href="{{ url_for('team', tier=r.tier, team=r.team) }}">{{ r.team }}</a></td>
+      <td>{{ r.tier }}</td>
+      <td>{{ r.record }}</td>
+      <td class="text-end">
+        {% set v = r[metric] %}
+        {% if metric == 'wp' %}{{ '%.3f'|format(v) }}
+        {% elif metric == 'avg_ovr' %}{{ v|int }}
+        {% else %}{{ v }}{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

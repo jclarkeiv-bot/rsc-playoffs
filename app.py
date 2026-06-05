@@ -8,6 +8,7 @@ Run:  python app.py    ->  http://127.0.0.1:5000
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for
 
 from rsc import playoffs as P
@@ -15,6 +16,7 @@ from rsc import profiles
 from rsc import project
 from rsc import rating
 from rsc import advanced
+from rsc import balance as balance_mod
 from rsc.engine.clinch import build_tier_state, evaluate_team
 from rsc.engine.simulate import playoff_curve
 from rsc.engine.compare import compare_players, compare_teams
@@ -48,8 +50,10 @@ def players_df():
 def index():
     s = season()
     conf = P.model_confidence(s)
+    pdf = profiles.players()
+    counts = {"total": int(len(pdf)), "played": int((pdf["GP"] >= 1).sum())}
     return render_template("index.html", tiers=s.tiers, label=SEASON_LABEL,
-                           conf=conf)
+                           conf=conf, counts=counts)
 
 
 @app.route("/tier/<tier>")
@@ -173,6 +177,134 @@ def overskilled():
         cand = cand[cand["Tier"] == tier]
     return render_template("overskilled.html", rows=cand.head(80).to_dict("records"),
                            tier=tier, tiers=season().tiers, label=SEASON_LABEL)
+
+
+@app.route("/team-rankings")
+def team_rankings():
+    s = season()
+    tier = request.args.get("tier", "all")
+    metric = request.args.get("metric", "avg_ovr")
+    if metric not in profiles.TEAM_METRICS:
+        metric = "avg_ovr"
+    t = profiles.team_metrics(s)
+    if tier != "all":
+        t = t[t["tier"] == tier]
+    t = t.dropna(subset=[metric]).sort_values(metric, ascending=False).head(120)
+    t.insert(0, "rank", range(1, len(t) + 1))
+    return render_template("team_rankings.html", rows=t.to_dict("records"),
+                           tier=tier, metric=metric,
+                           metric_opts=profiles.TEAM_METRICS,
+                           metric_label=profiles.TEAM_METRICS[metric][0],
+                           tiers=s.tiers, label=SEASON_LABEL)
+
+
+@app.route("/matches")
+def matches():
+    s = season()
+    tier = request.args.get("tier", s.tiers[0])
+    team = request.args.get("team", "")
+    show = request.args.get("show", "all")  # all | played | upcoming
+    m = s.matches[s.matches["tier"] == tier].copy()
+    teams = sorted(set(m["away"]).union(m["home"]))
+    if team:
+        m = m[(m["away"] == team) | (m["home"] == team)]
+    if show == "played":
+        m = m[m["played"]]
+    elif show == "upcoming":
+        m = m[~m["played"]]
+    m["_d"] = pd.to_datetime(m["date"], errors="coerce")
+    m = m.sort_values(["_d", "match_day"], na_position="last")
+    rows = []
+    for r in m.itertuples():
+        winner = None
+        if r.played:
+            winner = (r.away if r.away_g > r.home_g
+                      else r.home if r.home_g > r.away_g else "tie")
+        rows.append({
+            "md": (str(r.match_day) if r.is_regular else r.round_label),
+            "is_regular": r.is_regular,
+            "date": r.date.strftime("%b %d") if pd.notna(r.date) else "",
+            "away": r.away, "home": r.home,
+            "away_g": int(r.away_g) if r.played else None,
+            "home_g": int(r.home_g) if r.played else None,
+            "played": bool(r.played), "winner": winner,
+        })
+    return render_template("matches.html", tier=tier, team=team, show=show,
+                           teams=teams, rows=rows, tiers=s.tiers,
+                           label=SEASON_LABEL)
+
+
+@app.route("/match")
+def match_detail():
+    s = season()
+    tier = request.args.get("tier")
+    md = request.args.get("md", "")
+    away = request.args.get("away")
+    home = request.args.get("home")
+    m = s.matches[(s.matches["tier"] == tier) & (s.matches["away"] == away)
+                  & (s.matches["home"] == home)]
+    if md.isdigit():
+        m = m[m["match_day"] == int(md)]
+    else:
+        m = m[m["round_label"] == md]
+    if m.empty:
+        return redirect(url_for("matches", tier=tier))
+    r = m.iloc[0]
+    played = bool(r["played"])
+    winner = None
+    if played:
+        winner = (away if r["away_g"] > r["home_g"]
+                  else home if r["home_g"] > r["away_g"] else "tie")
+
+    from rsc.engine.standings import compute_standings
+    st = compute_standings(s.matches)
+    st = st[st["tier"] == tier].set_index("team")
+
+    def rec(t):
+        return (f"{int(st.loc[t].w)}-{int(st.loc[t].l)}" if t in st.index else "0-0")
+
+    pred = compare_teams(s, tier, away, home)  # Elo matchup
+    # predicted favourite + whether the prediction matched the actual winner
+    fav = away if pred.p_a_game >= 0.5 else home
+    pred_correct = (winner == fav) if (played and winner != "tie") else None
+
+    try:
+        roster_a = profiles.team_roster(tier, away).head(5).to_dict("records")
+        roster_h = profiles.team_roster(tier, home).head(5).to_dict("records")
+    except Exception:
+        roster_a = roster_h = []
+
+    ctx = {
+        "tier": tier, "away": away, "home": home,
+        "md_label": ("Match day " + md) if md.isdigit() else md,
+        "date": r["date"].strftime("%b %d, %Y") if pd.notna(r["date"]) else "",
+        "played": played, "winner": winner,
+        "away_g": int(r["away_g"]) if played else None,
+        "home_g": int(r["home_g"]) if played else None,
+        "rec_a": rec(away), "rec_h": rec(home),
+        "p_away": pred.p_a_game, "split": pred.series_split,
+        "elo_a": pred.elo_a, "elo_h": pred.elo_b,
+        "fav": fav, "pred_correct": pred_correct,
+        "roster_a": roster_a, "roster_h": roster_h,
+    }
+    return render_template("match.html", tiers=s.tiers, label=SEASON_LABEL, **ctx)
+
+
+@app.route("/balance")
+def tier_balance():
+    d = balance_mod.diagnose(profiles.players())
+    return render_template("balance.html", d=d, tiers=season().tiers,
+                           label=SEASON_LABEL)
+
+
+@app.route("/balance/<tier>")
+def balance_tier(tier):
+    s = season()
+    if tier not in s.tiers:
+        return redirect(url_for("tier_balance"))
+    up, down = rating.tier_misplaced(profiles.players(), tier)
+    return render_template("balance_tier.html", tier=tier, up=up, down=down,
+                           tiers=s.tiers, label=SEASON_LABEL)
 
 
 @app.route("/stat-impact")

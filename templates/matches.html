@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+{% block body %}
+<h1 class="h3">Matches</h1>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small">Tier</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Team</label>
+    <select name="team" class="form-select" onchange="this.form.submit()">
+      <option value="">All teams</option>
+      {% for t in teams %}<option value="{{ t }}" {{ 'selected' if t==team }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small">Show</label>
+    <select name="show" class="form-select" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if show=='all' }}>All</option>
+      <option value="played" {{ 'selected' if show=='played' }}>Played</option>
+      <option value="upcoming" {{ 'selected' if show=='upcoming' }}>Upcoming</option>
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Go</button></div>
+</form>
+
+<p class="text-secondary small">{{ rows|length }} matches{{ ' for ' ~ team if team }}. Each match is a 4-game series; the score is games won. The winning side is bold.</p>
+<table class="table table-sm table-hover mono">
+  <thead><tr>
+    <th>Match day</th><th>Date</th><th class="text-end">Away</th>
+    <th class="text-center">Score</th><th>Home</th><th>Result</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if not r.is_regular %} class="table-warning-subtle"{% endif %}>
+      <td>{% if r.is_regular %}Match day {{ r.md }}{% else %}<span class="badge text-bg-warning">{{ r.md }}</span>{% endif %}</td>
+      <td class="text-secondary">{{ r.date }}</td>
+      <td class="text-end {{ 'fw-bold' if r.winner == r.away }}">
+        <a href="{{ url_for('team', tier=tier, team=r.away) }}">{{ r.away }}</a>
+      </td>
+      <td class="text-center">
+        <a href="{{ url_for('match_detail', tier=tier, md=r.md, away=r.away, home=r.home) }}" title="Match details">
+        {% if r.played %}{{ r.away_g }}&ndash;{{ r.home_g }}{% else %}<span class="text-secondary">vs</span>{% endif %}
+        </a>
+      </td>
+      <td class="{{ 'fw-bold' if r.winner == r.home }}">
+        <a href="{{ url_for('team', tier=tier, team=r.home) }}">{{ r.home }}</a>
+      </td>
+      <td>
+        {% if not r.played %}<span class="text-secondary">scheduled</span>
+        {% elif r.winner == 'tie' %}<span class="badge text-bg-secondary">tie</span>
+        {% else %}<span class="text-secondary">{{ r.winner }} won</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

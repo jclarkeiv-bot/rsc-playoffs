@@ -29,10 +29,10 @@
 <table class="table table-hover align-middle mono">
   <thead>
     <tr>
-      <th>#</th><th>Team</th><th>Record</th><th>Win%</th>
+      <th>#</th><th>Team</th><th>Record</th><th title="Win percentage = game-wins / games played">Win %</th>
       <th class="prob-cell" title="Share of 30,000 simulated seasons (remaining games played out with an Elo model) where this team finishes in the top-K playoff spots.">Playoff odds</th>
       <th title="Share of simulations where the team wins the tier - regular season then a simulated seeded playoff bracket (Bo5 early, Bo7 semis+final).">Title %</th>
-      <th title="Average final seed across all simulations.">Avg seed</th><th>Status</th><th></th>
+      <th title="Average final seed across all simulations.">Average seed</th><th>Status</th><th></th>
     </tr>
   </thead>
   <tbody>
@@ -68,7 +68,7 @@
 <h2 class="h5 mt-4">Projected final standings</h2>
 <p class="text-secondary small">Where each team is most likely to finish (simulation average record &amp; median seed). The line marks the top {{ k }} playoff cut.</p>
 <table class="table table-sm table-hover mono">
-  <thead><tr><th>#</th><th>Team</th><th>Proj. record</th><th>Proj. seed</th><th>Playoff odds</th><th>Title %</th></tr></thead>
+  <thead><tr><th>#</th><th>Team</th><th>Projected record</th><th>Projected seed</th><th>Playoff odds</th><th>Title %</th></tr></thead>
   <tbody>
   {% for r in proj %}
     {% if loop.index == k + 1 %}<tr><td colspan="6" class="p-0"><div style="border-top:2px dashed #e8590c"></div></td></tr>{% endif %}

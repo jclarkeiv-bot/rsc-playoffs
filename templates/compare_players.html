@@ -16,6 +16,10 @@
 </form>
 
 {% if result %}
+<p class="text-secondary small mono">
+  {{ result.a }}: {{ result.tier_a }}, {{ result.gp_a }} games played &nbsp;|&nbsp;
+  {{ result.b }}: {{ result.tier_b }}, {{ result.gp_b }} games played
+</p>
 <table class="table table-hover mono">
   <thead><tr>
     <th>Stat</th><th>{{ result.a }}</th><th>%ile</th>

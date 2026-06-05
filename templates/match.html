@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ away }} vs {{ home }}{% endblock %}
+{% block body %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{{ url_for('matches', tier=tier) }}">{{ tier }} matches</a></li>
+  <li class="breadcrumb-item active">{{ away }} vs {{ home }}</li>
+</ol></nav>
+
+<div class="text-secondary small">{{ md_label }}{{ ' - ' ~ date if date }}</div>
+<div class="row align-items-center text-center my-3">
+  <div class="col-5">
+    <h2 class="h4 mb-0 {{ 'fw-bold' if winner == away }}"><a href="{{ url_for('team', tier=tier, team=away) }}">{{ away }}</a></h2>
+    <div class="text-secondary small">away - {{ rec_a }}</div>
+  </div>
+  <div class="col-2 mono">
+    {% if played %}<div class="display-6">{{ away_g }}&ndash;{{ home_g }}</div>
+    {% else %}<div class="h4 text-secondary">vs</div>{% endif %}
+  </div>
+  <div class="col-5">
+    <h2 class="h4 mb-0 {{ 'fw-bold' if winner == home }}"><a href="{{ url_for('team', tier=tier, team=home) }}">{{ home }}</a></h2>
+    <div class="text-secondary small">home - {{ rec_h }}</div>
+  </div>
+</div>
+{% if played %}
+  <p class="text-center">
+    {% if winner == 'tie' %}<span class="badge text-bg-secondary">Tie</span>
+    {% else %}<span class="badge text-bg-success">{{ winner }} won the series</span>{% endif %}
+  </p>
+{% endif %}
+
+<div class="card mb-4"><div class="card-body">
+  <h3 class="h6">Model matchup <small class="text-secondary">(Elo)</small></h3>
+  <p class="mb-1 mono">
+    {{ away }} Elo {{ elo_a }} &middot; {{ home }} Elo {{ elo_h }}<br>
+    Model favored <strong>{{ fav }}</strong>: {{ '%.0f'|format([p_away, 1-p_away]|max * 100) }}% per game,
+    expected series split {{ split[0] }}&ndash;{{ split[1] }} ({{ away }}&rsquo;s games).
+  </p>
+  {% if pred_correct is not none %}
+    <span class="badge {{ 'text-bg-success' if pred_correct else 'text-bg-danger' }}">
+      Model {{ 'called it correctly' if pred_correct else 'missed this one' }}
+    </span>
+  {% elif not played %}
+    <span class="badge text-bg-secondary">Upcoming - prediction above</span>
+  {% endif %}
+</div></div>
+
+<div class="row g-3">
+  {% for nm, roster, r0 in [(away, roster_a, rec_a), (home, roster_h, rec_h)] %}
+  <div class="col-md-6">
+    <h3 class="h6">{{ nm }} <small class="text-secondary">({{ r0 }})</small></h3>
+    <table class="table table-sm mono">
+      <thead><tr><th>Player</th><th>Games</th><th>Points/g</th><th>Goals/g</th></tr></thead>
+      <tbody>
+      {% for p in roster %}
+        <tr>
+          <td><a href="{{ url_for('player', name=p.Player) }}">{{ p.Player }}</a></td>
+          <td>{{ p.GP }}</td>
+          <td>{{ '%.1f'|format(p['Pts/g']) }}</td>
+          <td>{{ '%.2f'|format(p['G/g']) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</div>
+<p class="text-secondary small">Individual per-game stats for this match would come from ballchasing replays where uploaded - not all matches have them.</p>
+{% endblock %}

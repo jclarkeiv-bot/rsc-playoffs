@@ -27,9 +27,9 @@
 {% if not rows %}<div class="alert alert-secondary">No overskilled players in {{ tier }}.</div>{% endif %}
 <table class="table table-hover table-sm mono">
   <thead><tr>
-    <th>Player</th><th>Tier</th><th>Team</th><th>GP</th>
+    <th>Player</th><th>Tier</th><th>Team</th><th title="Games Played">Games</th>
     <th title="Standard deviations above the player's tier average on the composite rating. Higher = bigger outlier.">Tier dominance</th>
-    <th title="League percentile of cross-tier skill (within-tier dominance + tier-strength bonus).">OVR</th>
+    <th title="Overall Rating: league percentile of cross-tier skill (within-tier dominance + tier-strength bonus).">Overall rating</th>
     <th title="The tier this player's cross-tier skill would place them in if all players were re-sorted by ability.">Projects to</th>
   </tr></thead>
   <tbody>
