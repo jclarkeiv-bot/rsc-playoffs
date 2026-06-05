@@ -159,6 +159,9 @@
   {% endfor %}
   </tbody>
 </table>
+{% else %}
+<h2 class="h5 mt-4">Advanced stats <small class="text-secondary">(ballchasing)</small></h2>
+<p class="text-secondary small">No ballchasing replay data for this player. Advanced stats (boost, speed, positioning, demos) only exist for the ~37% of players whose matches/scrims were uploaded to ballchasing - coverage depends on who uploads, not on the player.</p>
 {% endif %}
 
 {% if prof.duplicate_entries > 1 %}
