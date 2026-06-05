@@ -488,4 +488,7 @@ def cmp_players():
 
 if __name__ == "__main__":
     # Port 5000 is taken by another local app, so default to 5055.
-    app.run(host="127.0.0.1", port=5055, debug=True)
+    # Set RSC_HOST=0.0.0.0 to allow remote access (e.g. over Tailscale).
+    host = os.environ.get("RSC_HOST", "127.0.0.1")
+    debug = host == "127.0.0.1"            # never run the debugger when exposed
+    app.run(host=host, port=5055, debug=debug, threaded=True)
