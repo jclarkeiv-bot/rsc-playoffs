@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Model Accuracy{% endblock %}
+{% block body %}
+<h1 class="h3">Model accuracy over time</h1>
+<p class="text-secondary">
+  Walk-forward test: for each match day, the Elo model - trained <em>only</em> on games
+  before that day - predicts each series winner, then we score it against what actually
+  happened. This shows the model getting sharper as the season fills in.
+</p>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-4"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">Overall series accuracy</div>
+    <div class="display-6 mono">{{ acc.overall_hit_rate }}%</div>
+    <div class="text-secondary small">vs {{ acc.coin_hit_rate }}% coin flip</div>
+  </div></div></div>
+  <div class="col-sm-4"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">Series graded</div>
+    <div class="display-6 mono">{{ acc.total_series }}</div>
+    <div class="text-secondary small">decisive (non-tie) series</div>
+  </div></div></div>
+  <div class="col-sm-4"><div class="card"><div class="card-body text-center">
+    <div class="text-secondary small">Edge over coin flip</div>
+    <div class="display-6 mono">+{{ '%.1f'|format(acc.overall_hit_rate - acc.coin_hit_rate) }}</div>
+    <div class="text-secondary small">percentage points</div>
+  </div></div></div>
+</div>
+
+<canvas id="acc" height="110"></canvas>
+<table class="table table-sm mono mt-4" style="max-width:560px;">
+  <thead><tr><th>Match day</th><th>Series</th><th>Accuracy</th><th>Cumulative</th><th title="Game-level Brier score - lower is better-calibrated; 0.25 = coin flip.">Brier</th></tr></thead>
+  <tbody>
+  {% for r in acc.rows %}
+    <tr>
+      <td>{{ r.match_day }}</td><td>{{ r.n_series }}</td>
+      <td>{{ r.hit_rate }}%</td><td>{{ r.cum_hit_rate }}%</td><td>{{ r.brier }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">
+  Match day 1 sits near 50% because every team starts at the same rating, so early
+  predictions are essentially coin flips; accuracy climbs as the ratings learn. A perfect
+  predictor is impossible here - these are genuinely high-variance games (the model only
+  beats a coin by a few points per game, but that compounds over a season into the playoff odds).
+</p>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('acc'), {
+  type: 'line',
+  data: {
+    labels: {{ chart.labels|tojson }},
+    datasets: [
+      { label: 'Accuracy that match day', data: {{ chart.hit|tojson }},
+        borderColor:'#4263eb', backgroundColor:'rgba(66,99,235,.12)', tension:.3, pointRadius:3 },
+      { label: 'Cumulative accuracy', data: {{ chart.cum|tojson }},
+        borderColor:'#37b24d', borderDash:[6,4], tension:.3, pointRadius:2 }
+    ]
+  },
+  options: {
+    scales: { y: { min: 40, max: 80, title:{display:true,text:'% series predicted correctly'} },
+              x: { title:{display:true,text:'match day'} } },
+    plugins: { legend: { position:'bottom' },
+      annotation: {} }
+  }
+});
+</script>
+{% endblock %}

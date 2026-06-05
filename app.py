@@ -339,6 +339,20 @@ def balance_tier(tier):
                            tiers=s.tiers, label=SEASON_LABEL)
 
 
+@app.route("/accuracy")
+def accuracy():
+    from rsc.engine.predict import accuracy_by_matchday
+    s = season()
+    acc = accuracy_by_matchday(s.matches)
+    chart = {
+        "labels": [r["match_day"] for r in acc["rows"]],
+        "hit": [r["hit_rate"] for r in acc["rows"]],
+        "cum": [r["cum_hit_rate"] for r in acc["rows"]],
+    }
+    return render_template("accuracy.html", acc=acc, chart=chart,
+                           tiers=s.tiers, label=SEASON_LABEL)
+
+
 @app.route("/stat-impact")
 def stat_impact():
     imp = rating.stat_importance(profiles.players())

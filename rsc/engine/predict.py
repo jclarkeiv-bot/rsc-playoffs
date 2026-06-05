@@ -126,6 +126,56 @@ def backtest(matches: pd.DataFrame, k: float = 16.0) -> dict[str, Score]:
             for name, (n, brier, ll) in tot.items()}
 
 
+def accuracy_by_matchday(matches: pd.DataFrame, k: float = 16.0) -> dict:
+    """Walk-forward accuracy bucketed by match day. For each played regular
+    series, the Elo model (trained only on EARLIER games) predicts the winner;
+    we score hit-rate + game-level Brier, grouped by match day, so you can see
+    the model getting sharper as the season fills in.
+    """
+    r: dict[tuple[str, str], float] = defaultdict(lambda: ELO_BASE)
+    buckets: dict[int, list[float]] = {}   # md -> [series, hits, brier, games]
+
+    for m in _chrono(matches).itertuples(index=False):
+        md = m.match_day
+        if md is None:
+            continue
+        ka, kb = (m.tier, m.away), (m.tier, m.home)
+        e = _expected(r[ka], r[kb])             # P(away wins a game)
+        b = buckets.setdefault(int(md), [0, 0, 0.0, 0])
+        ng = m.away_g + m.home_g
+        # series-winner hit (skip ties - no winner)
+        if m.away_g != m.home_g:
+            fav_away = e >= 0.5
+            hit = fav_away == (m.away_g > m.home_g)
+            b[0] += 1
+            b[1] += 1 if hit else 0
+        # game-level Brier from the away perspective
+        b[2] += m.away_g * (e - 1) ** 2 + m.home_g * (e - 0) ** 2
+        b[3] += ng
+        # update
+        delta = k * (m.away_g - 4 * e)
+        r[ka] += delta
+        r[kb] -= delta
+
+    rows, cum_s, cum_h = [], 0, 0
+    for md in sorted(buckets):
+        series, hits, brier, games = buckets[md]
+        if games == 0:                          # skip empty/forfeit-only days
+            continue
+        cum_s += series
+        cum_h += hits
+        rows.append({
+            "match_day": md,
+            "n_series": int(series),
+            "hit_rate": round(hits / series * 100, 1) if series else None,
+            "cum_hit_rate": round(cum_h / cum_s * 100, 1) if cum_s else None,
+            "brier": round(brier / games, 3) if games else None,
+        })
+    overall = round(cum_h / cum_s * 100, 1) if cum_s else None
+    return {"rows": rows, "overall_hit_rate": overall,
+            "total_series": cum_s, "coin_hit_rate": 50.0}
+
+
 def confidence(scores: dict[str, Score]) -> dict:
     """Skill of the model vs a coin flip; a simple go/no-go gate."""
     elo, coin = scores["elo"], scores["coin"]
