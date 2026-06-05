@@ -29,19 +29,41 @@
 {% endif %}
 
 <div class="card mb-4"><div class="card-body">
-  <h3 class="h6">Model matchup <small class="text-secondary">(Elo)</small></h3>
-  <p class="mb-1 mono">
-    {{ away }} Elo {{ elo_a }} &middot; {{ home }} Elo {{ elo_h }}<br>
-    Model favored <strong>{{ fav }}</strong>: {{ '%.0f'|format([p_away, 1-p_away]|max * 100) }}% per game,
-    expected series split {{ split[0] }}&ndash;{{ split[1] }} ({{ away }}&rsquo;s games).
+  <h3 class="h6">Predicted game wins <small class="text-secondary">(out of 4)</small></h3>
+  <div class="row text-center align-items-center mono my-2">
+    <div class="col-5"><div class="display-6">{{ mu.exp_a }}</div><div class="text-secondary small">{{ away }}</div></div>
+    <div class="col-2 text-secondary">vs</div>
+    <div class="col-5"><div class="display-6">{{ mu.exp_b }}</div><div class="text-secondary small">{{ home }}</div></div>
+  </div>
+  <p class="text-secondary small mb-2">
+    Most likely result: <strong>{{ mu.most_likely.a }}&ndash;{{ mu.most_likely.b }}</strong>
+    ({{ '%.0f'|format(mu.most_likely.prob*100) }}% chance), {{ away }} games first.
+    {% if played %} Actual: <strong>{{ away_g }}&ndash;{{ home_g }}</strong>
+      &mdash; model {{ 'got the winner' if pred_correct else ('was off' if pred_correct is not none else 'tie') }}.{% endif %}
   </p>
-  {% if pred_correct is not none %}
-    <span class="badge {{ 'text-bg-success' if pred_correct else 'text-bg-danger' }}">
-      Model {{ 'called it correctly' if pred_correct else 'missed this one' }}
-    </span>
-  {% elif not played %}
-    <span class="badge text-bg-secondary">Upcoming - prediction above</span>
-  {% endif %}
+  <table class="table table-sm mono mb-2" style="max-width:440px;">
+    <thead><tr><th>Result ({{ away }}&ndash;{{ home }})</th><th>Chance</th></tr></thead>
+    <tbody>
+    {% for d in mu.dist %}
+      <tr{% if played and d.a == away_g %} class="table-active"{% endif %}>
+        <td>{{ d.a }}&ndash;{{ d.b }}</td>
+        <td style="min-width:170px;">
+          <div class="d-flex align-items-center gap-2">
+            <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
+              <div style="height:13px;border-radius:3px;background:#4263eb;width:{{ (d.prob*100)|round(0) }}%;"></div>
+            </div>
+            <span style="width:42px;text-align:right;">{{ '%.0f'|format(d.prob*100) }}%</span>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="text-secondary small mb-0">
+    Blends team form (Elo: {{ away }} {{ mu.elo_a|int }}, {{ home }} {{ mu.elo_b|int }}) with roster skill
+    (avg player rating: {{ away }} {{ mu.str_a|int }}, {{ home }} {{ mu.str_b|int }}).
+    Prediction is in <strong>games won</strong> - every game counts toward standings, not who "wins the match."
+  </p>
 </div></div>
 
 <div class="row g-3">

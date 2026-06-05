@@ -3,46 +3,53 @@
 {% block body %}
 <h1 class="h3">Model accuracy over time</h1>
 <p class="text-secondary">
-  Walk-forward test: for each match day, the Elo model - trained <em>only</em> on games
-  before that day - predicts each series winner, then we score it against what actually
-  happened. This shows the model getting sharper as the season fills in.
+  Walk-forward test: for each match day, the model - trained <em>only</em> on games before
+  that day - predicts each game, then we score it against what actually happened. Because
+  standings are decided by <strong>total games won</strong>, the headline metric is
+  <strong>game-level accuracy</strong>: of all individual games, how often did the model's
+  favored team win? (Series win-rate is shown too, but it matters less.)
 </p>
 
 <div class="row g-3 mb-3">
   <div class="col-sm-4"><div class="card"><div class="card-body text-center">
-    <div class="text-secondary small">Overall series accuracy</div>
-    <div class="display-6 mono">{{ acc.overall_hit_rate }}%</div>
-    <div class="text-secondary small">vs {{ acc.coin_hit_rate }}% coin flip</div>
+    <div class="text-secondary small">Game-level accuracy</div>
+    <div class="display-6 mono">{{ acc.overall_game_acc }}%</div>
+    <div class="text-secondary small">of {{ acc.total_games }} games - vs 50% coin</div>
   </div></div></div>
   <div class="col-sm-4"><div class="card"><div class="card-body text-center">
-    <div class="text-secondary small">Series graded</div>
-    <div class="display-6 mono">{{ acc.total_series }}</div>
-    <div class="text-secondary small">decisive (non-tie) series</div>
+    <div class="text-secondary small">Series win-rate <span title="Less meaningful - the league rewards total game wins, not match wins.">(secondary)</span></div>
+    <div class="display-6 mono">{{ acc.overall_hit_rate }}%</div>
+    <div class="text-secondary small">of {{ acc.total_series }} decisive series</div>
   </div></div></div>
   <div class="col-sm-4"><div class="card"><div class="card-body text-center">
     <div class="text-secondary small">Edge over coin flip</div>
-    <div class="display-6 mono">+{{ '%.1f'|format(acc.overall_hit_rate - acc.coin_hit_rate) }}</div>
-    <div class="text-secondary small">percentage points</div>
+    <div class="display-6 mono">+{{ '%.1f'|format(acc.overall_game_acc - 50) }}</div>
+    <div class="text-secondary small">percentage points (games)</div>
   </div></div></div>
 </div>
 
 <canvas id="acc" height="110"></canvas>
-<table class="table table-sm mono mt-4" style="max-width:560px;">
-  <thead><tr><th>Match day</th><th>Series</th><th>Accuracy</th><th>Cumulative</th><th title="Game-level Brier score - lower is better-calibrated; 0.25 = coin flip.">Brier</th></tr></thead>
+<table class="table table-sm mono mt-4" style="max-width:640px;">
+  <thead><tr>
+    <th>Match day</th><th>Games</th><th>Game accuracy</th><th>Cumulative</th>
+    <th class="text-secondary">Series win-rate</th>
+    <th title="Game-level Brier score - lower is better-calibrated; 0.25 = coin flip.">Brier</th>
+  </tr></thead>
   <tbody>
   {% for r in acc.rows %}
     <tr>
-      <td>{{ r.match_day }}</td><td>{{ r.n_series }}</td>
-      <td>{{ r.hit_rate }}%</td><td>{{ r.cum_hit_rate }}%</td><td>{{ r.brier }}</td>
+      <td>{{ r.match_day }}</td><td>{{ r.n_games }}</td>
+      <td class="fw-semibold">{{ r.game_acc }}%</td><td>{{ r.cum_game_acc }}%</td>
+      <td class="text-secondary">{{ r.hit_rate }}%</td><td>{{ r.brier }}</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 <p class="text-secondary small">
   Match day 1 sits near 50% because every team starts at the same rating, so early
-  predictions are essentially coin flips; accuracy climbs as the ratings learn. A perfect
-  predictor is impossible here - these are genuinely high-variance games (the model only
-  beats a coin by a few points per game, but that compounds over a season into the playoff odds).
+  predictions are essentially coin flips; accuracy climbs as the ratings learn. These are
+  genuinely high-variance games - the per-game edge is only a few points - but it compounds
+  over a season into the playoff odds.
 </p>
 {% endblock %}
 
@@ -54,17 +61,16 @@ new Chart(document.getElementById('acc'), {
   data: {
     labels: {{ chart.labels|tojson }},
     datasets: [
-      { label: 'Accuracy that match day', data: {{ chart.hit|tojson }},
+      { label: 'Game accuracy that match day', data: {{ chart.game|tojson }},
         borderColor:'#4263eb', backgroundColor:'rgba(66,99,235,.12)', tension:.3, pointRadius:3 },
-      { label: 'Cumulative accuracy', data: {{ chart.cum|tojson }},
+      { label: 'Cumulative game accuracy', data: {{ chart.cum_game|tojson }},
         borderColor:'#37b24d', borderDash:[6,4], tension:.3, pointRadius:2 }
     ]
   },
   options: {
-    scales: { y: { min: 40, max: 80, title:{display:true,text:'% series predicted correctly'} },
+    scales: { y: { min: 40, max: 75, title:{display:true,text:'% of individual games predicted correctly'} },
               x: { title:{display:true,text:'match day'} } },
-    plugins: { legend: { position:'bottom' },
-      annotation: {} }
+    plugins: { legend: { position:'bottom' } }
   }
 });
 </script>

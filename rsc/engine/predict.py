@@ -69,6 +69,25 @@ def make_elo_model(ratings: dict, tier: str):
     return model
 
 
+def make_blended_model(ratings: dict, strengths: dict, tier: str,
+                       skill_weight: float = 0.25, skill_scale: float = 30.0):
+    """Per-game win prob blending team form (Elo) with roster skill (average
+    player OVR). skill_weight is how much the roster-skill signal counts.
+
+    Still a per-GAME probability, so it feeds the game-based simulation/standings
+    exactly like the Elo model - match/series outcomes are never the target.
+    """
+    def model(a, b):
+        p_elo = _expected(ratings.get((tier, a), ELO_BASE),
+                          ratings.get((tier, b), ELO_BASE))
+        sa, sb = strengths.get((tier, a)), strengths.get((tier, b))
+        if sa is None or sb is None or skill_weight <= 0:
+            return p_elo
+        p_skill = 1.0 / (1.0 + 10 ** ((sb - sa) / skill_scale))
+        return (1 - skill_weight) * p_elo + skill_weight * p_skill
+    return model
+
+
 # ---- backtesting -------------------------------------------------------------
 
 @dataclass
@@ -141,14 +160,16 @@ def accuracy_by_matchday(matches: pd.DataFrame, k: float = 16.0) -> dict:
             continue
         ka, kb = (m.tier, m.away), (m.tier, m.home)
         e = _expected(r[ka], r[kb])             # P(away wins a game)
-        b = buckets.setdefault(int(md), [0, 0, 0.0, 0])
+        b = buckets.setdefault(int(md), [0, 0, 0.0, 0, 0])
         ng = m.away_g + m.home_g
+        fav_away = e >= 0.5
         # series-winner hit (skip ties - no winner)
         if m.away_g != m.home_g:
-            fav_away = e >= 0.5
             hit = fav_away == (m.away_g > m.home_g)
             b[0] += 1
             b[1] += 1 if hit else 0
+        # game-level: how many individual games the favored side actually won
+        b[4] += m.away_g if fav_away else m.home_g
         # game-level Brier from the away perspective
         b[2] += m.away_g * (e - 1) ** 2 + m.home_g * (e - 0) ** 2
         b[3] += ng
@@ -157,23 +178,29 @@ def accuracy_by_matchday(matches: pd.DataFrame, k: float = 16.0) -> dict:
         r[ka] += delta
         r[kb] -= delta
 
-    rows, cum_s, cum_h = [], 0, 0
+    rows, cum_s, cum_h, cum_g, cum_fg = [], 0, 0, 0, 0
     for md in sorted(buckets):
-        series, hits, brier, games = buckets[md]
+        series, hits, brier, games, fav_games = buckets[md]
         if games == 0:                          # skip empty/forfeit-only days
             continue
         cum_s += series
         cum_h += hits
+        cum_g += games
+        cum_fg += fav_games
         rows.append({
             "match_day": md,
             "n_series": int(series),
+            "n_games": int(games),
+            "game_acc": round(fav_games / games * 100, 1),     # game-level
+            "cum_game_acc": round(cum_fg / cum_g * 100, 1),
             "hit_rate": round(hits / series * 100, 1) if series else None,
             "cum_hit_rate": round(cum_h / cum_s * 100, 1) if cum_s else None,
             "brier": round(brier / games, 3) if games else None,
         })
-    overall = round(cum_h / cum_s * 100, 1) if cum_s else None
-    return {"rows": rows, "overall_hit_rate": overall,
-            "total_series": cum_s, "coin_hit_rate": 50.0}
+    return {"rows": rows,
+            "overall_game_acc": round(cum_fg / cum_g * 100, 1) if cum_g else None,
+            "overall_hit_rate": round(cum_h / cum_s * 100, 1) if cum_s else None,
+            "total_series": cum_s, "total_games": cum_g, "coin_hit_rate": 50.0}
 
 
 def confidence(scores: dict[str, Score]) -> dict:

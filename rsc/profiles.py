@@ -64,6 +64,14 @@ TEAM_METRICS = {
 }
 
 
+def team_strength() -> dict:
+    """Average player Overall Rating per (tier, team) - a roster-skill measure
+    used to blend player skill into match prediction."""
+    r = rated()
+    g = r[r["OVR"].notna()].groupby(["Tier", "Team"])["OVR"].mean()
+    return {(t, tm): float(v) for (t, tm), v in g.items()}
+
+
 def team_metrics(season) -> pd.DataFrame:
     """One row per team with record, per-game production, average player rating,
     and the league sheet's RPI / strength-of-schedule."""

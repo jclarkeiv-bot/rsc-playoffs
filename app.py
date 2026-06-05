@@ -295,9 +295,8 @@ def match_detail():
     def rec(t):
         return (f"{int(st.loc[t].w)}-{int(st.loc[t].l)}" if t in st.index else "0-0")
 
-    pred = compare_teams(s, tier, away, home)  # Elo matchup
-    # predicted favourite + whether the prediction matched the actual winner
-    fav = away if pred.p_a_game >= 0.5 else home
+    mu = P.team_matchup(s, tier, away, home)   # predicts GAME wins (away=a, home=b)
+    fav = away if mu["exp_a"] >= mu["exp_b"] else home
     pred_correct = (winner == fav) if (played and winner != "tie") else None
 
     try:
@@ -314,9 +313,7 @@ def match_detail():
         "away_g": int(r["away_g"]) if played else None,
         "home_g": int(r["home_g"]) if played else None,
         "rec_a": rec(away), "rec_h": rec(home),
-        "p_away": pred.p_a_game, "split": pred.series_split,
-        "elo_a": pred.elo_a, "elo_h": pred.elo_b,
-        "fav": fav, "pred_correct": pred_correct,
+        "mu": mu, "fav": fav, "pred_correct": pred_correct,
         "roster_a": roster_a, "roster_h": roster_h,
     }
     return render_template("match.html", tiers=s.tiers, label=SEASON_LABEL, **ctx)
@@ -346,8 +343,8 @@ def accuracy():
     acc = accuracy_by_matchday(s.matches)
     chart = {
         "labels": [r["match_day"] for r in acc["rows"]],
-        "hit": [r["hit_rate"] for r in acc["rows"]],
-        "cum": [r["cum_hit_rate"] for r in acc["rows"]],
+        "game": [r["game_acc"] for r in acc["rows"]],
+        "cum_game": [r["cum_game_acc"] for r in acc["rows"]],
     }
     return render_template("accuracy.html", acc=acc, chart=chart,
                            tiers=s.tiers, label=SEASON_LABEL)

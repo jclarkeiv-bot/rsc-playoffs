@@ -15,20 +15,59 @@ from pathlib import Path
 from .ingest import load_season, Season
 from .engine.clinch import build_tier_state, evaluate_team, TierState
 from .engine.simulate import simulate_tier, playoff_curve, SimResult
-from .engine.predict import train_elo, make_elo_model, backtest, confidence
+from .engine.predict import (train_elo, make_elo_model, make_blended_model,
+                             backtest, confidence, _expected, ELO_BASE)
 
 _DATA = Path(__file__).resolve().parent.parent / "data"
+SKILL_WEIGHT = 0.25     # how much roster skill (avg player OVR) counts vs Elo form
 
 
 def load(label: str = "S26") -> Season:
     return load_season(_DATA / f"{label}_standings.xlsx", label)
 
 
-def elo_model_for(season: Season, tier: str):
+def _tier_ratings(season: Season, tier: str):
     played = season.matches[(season.matches["tier"] == tier)
                             & (season.matches["is_regular"])
                             & (season.matches["played"])]
-    return make_elo_model(train_elo(played), tier)
+    return train_elo(played)
+
+
+def elo_model_for(season: Season, tier: str):
+    """Per-game model blending team form (Elo) with roster skill (avg OVR)."""
+    ratings = _tier_ratings(season, tier)
+    from . import profiles
+    try:
+        strengths = profiles.team_strength()
+    except Exception:
+        strengths = {}
+    return make_blended_model(ratings, strengths, tier, SKILL_WEIGHT)
+
+
+def team_matchup(season: Season, tier: str, a: str, b: str) -> dict:
+    """Predict a single match: expected GAME wins for each team (out of 4) and
+    the full game-split distribution, blending Elo form + roster skill."""
+    from math import comb
+    ratings = _tier_ratings(season, tier)
+    from . import profiles
+    try:
+        strengths = profiles.team_strength()
+    except Exception:
+        strengths = {}
+    model = make_blended_model(ratings, strengths, tier, SKILL_WEIGHT)
+    p = model(a, b)                                  # P(a wins one game)
+    dist = [{"a": k, "b": 4 - k,
+             "prob": comb(4, k) * p ** k * (1 - p) ** (4 - k)} for k in range(5)]
+    return {
+        "p_a": p, "p_elo": _expected(ratings.get((tier, a), ELO_BASE),
+                                     ratings.get((tier, b), ELO_BASE)),
+        "exp_a": round(4 * p, 1), "exp_b": round(4 * (1 - p), 1),
+        "elo_a": round(ratings.get((tier, a), ELO_BASE), 0),
+        "elo_b": round(ratings.get((tier, b), ELO_BASE), 0),
+        "str_a": round(strengths.get((tier, a), 50), 0),
+        "str_b": round(strengths.get((tier, b), 50), 0),
+        "dist": dist, "most_likely": max(dist, key=lambda d: d["prob"]),
+    }
 
 
 def model_confidence(season: Season) -> dict:
