@@ -72,11 +72,32 @@ TEAM_METRICS = {
 }
 
 
-def team_strength() -> dict:
-    """Average player Overall Rating per (tier, team) - a roster-skill measure
-    used to blend player skill into match prediction."""
+_CAREER_PRIOR_GAMES = 10   # weight of career skill vs current-season OVR
+
+
+def team_strength(mode: str = "current") -> dict:
+    """Average roster skill per (tier, team).
+
+    mode='current'  -> this season's Overall Rating only.
+    mode='all'      -> each player's OVR regressed toward their career skill
+                       (from past seasons), so returning players carry a prior.
+                       Early in a season the prior dominates; it fades with games.
+    """
     r = rated()
-    g = r[r["OVR"].notna()].groupby(["Tier", "Team"])["OVR"].mean()
+    rr = r[r["OVR"].notna()].copy()
+    if mode == "all":
+        from . import comps
+        career = comps.historical_skill()
+        if career:
+            key = rr["Player"].astype(str).str.lower()
+            car = key.map(career).fillna(50.0)
+            k = _CAREER_PRIOR_GAMES
+            rr["skill"] = (rr["GP"] * rr["OVR"] + k * car) / (rr["GP"] + k)
+        else:
+            rr["skill"] = rr["OVR"]
+    else:
+        rr["skill"] = rr["OVR"]
+    g = rr.groupby(["Tier", "Team"])["skill"].mean()
     return {(t, tm): float(v) for (t, tm), v in g.items()}
 
 

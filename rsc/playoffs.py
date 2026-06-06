@@ -33,25 +33,28 @@ def _tier_ratings(season: Season, tier: str):
     return train_elo(played)
 
 
-def elo_model_for(season: Season, tier: str):
-    """Per-game model blending team form (Elo) with roster skill (avg OVR)."""
+def elo_model_for(season: Season, tier: str, mode: str = "all"):
+    """Per-game model blending team form (Elo) with roster skill.
+    mode='all' folds in career skill (past seasons); 'current' is this season only."""
     ratings = _tier_ratings(season, tier)
     from . import profiles
     try:
-        strengths = profiles.team_strength()
+        strengths = profiles.team_strength(mode)
     except Exception:
         strengths = {}
     return make_blended_model(ratings, strengths, tier, SKILL_WEIGHT)
 
 
-def team_matchup(season: Season, tier: str, a: str, b: str) -> dict:
+def team_matchup(season: Season, tier: str, a: str, b: str,
+                 mode: str = "all") -> dict:
     """Predict a single match: expected GAME wins for each team (out of 4) and
-    the full game-split distribution, blending Elo form + roster skill."""
+    the full game-split distribution. mode='all' uses career skill priors;
+    'current' uses this season only."""
     from math import comb
     ratings = _tier_ratings(season, tier)
     from . import profiles
     try:
-        strengths = profiles.team_strength()
+        strengths = profiles.team_strength(mode)
     except Exception:
         strengths = {}
     model = make_blended_model(ratings, strengths, tier, SKILL_WEIGHT)
@@ -94,16 +97,18 @@ def tier_state(season: Season, tier: str) -> TierState:
     return build_tier_state(season, tier)
 
 
-def tier_odds(season: Season, tier: str, n_sims: int = 30000) -> SimResult:
+def tier_odds(season: Season, tier: str, n_sims: int = 30000,
+              mode: str = "all") -> SimResult:
     ts = build_tier_state(season, tier)
-    return simulate_tier(ts, n_sims=n_sims, model=elo_model_for(season, tier))
+    return simulate_tier(ts, n_sims=n_sims, model=elo_model_for(season, tier, mode))
 
 
 def team_outlook(season: Season, tier: str, team: str,
-                 sim: SimResult | None = None, n_sims: int = 30000) -> Outlook:
+                 sim: SimResult | None = None, n_sims: int = 30000,
+                 mode: str = "all") -> Outlook:
     ts = build_tier_state(season, tier)
     verdict = evaluate_team(season, tier, team, ts=ts)
-    sim = sim or simulate_tier(ts, n_sims=n_sims, model=elo_model_for(season, tier))
+    sim = sim or simulate_tier(ts, n_sims=n_sims, model=elo_model_for(season, tier, mode))
     summ = sim.summary().set_index("team")
     curve = playoff_curve(sim, team).to_dict("records")
     status = ("CLINCHED" if verdict.clinched

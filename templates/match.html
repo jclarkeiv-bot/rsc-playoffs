@@ -35,6 +35,13 @@
     <div class="col-2 text-secondary">vs</div>
     <div class="col-5"><div class="display-6">{{ mu.exp_b }}</div><div class="text-secondary small">{{ home }}</div></div>
   </div>
+  <table class="table table-sm mono text-center mb-2" style="max-width:420px;margin:auto;">
+    <thead><tr><th class="text-start">Model</th><th>{{ away }}</th><th>{{ home }}</th></tr></thead>
+    <tbody>
+      <tr><td class="text-start" title="Current-season form + roster skill including each player's career skill from past seasons.">All data</td><td class="fw-semibold">{{ mu.exp_a }}</td><td class="fw-semibold">{{ mu.exp_b }}</td></tr>
+      <tr><td class="text-start text-secondary" title="This season only - no historical priors.">Current season only</td><td class="text-secondary">{{ mu_cur.exp_a }}</td><td class="text-secondary">{{ mu_cur.exp_b }}</td></tr>
+    </tbody>
+  </table>
   <p class="text-secondary small mb-2">
     Most likely result: <strong>{{ mu.most_likely.a }}&ndash;{{ mu.most_likely.b }}</strong>
     ({{ '%.0f'|format(mu.most_likely.prob*100) }}% chance), {{ away }} games first.

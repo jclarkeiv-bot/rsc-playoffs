@@ -127,6 +127,21 @@ def forecast(name: str, k: int = 25) -> dict | None:
             "n_seasons": int(past["season"].nunique()), "rows": rows}
 
 
+def historical_skill() -> dict:
+    """Career production level per player, 0-100, from COMPLETED past seasons:
+    the average of their per-game 'score' percentile within each past season.
+    Used as a prior so returning players aren't rated from scratch each season."""
+    pool = load_pool(min_games=8)
+    if pool.empty or "score" not in pool:
+        return {}
+    past = pool[pool["season"] != CURRENT_SEASON].copy()
+    if past.empty:
+        return {}
+    past["pct"] = past.groupby("season")["score"].rank(pct=True) * 100
+    g = past.groupby(past["Player"].astype(str).str.lower())["pct"].mean()
+    return {k: float(v) for k, v in g.items()}
+
+
 def player_history(name: str) -> list[dict]:
     """A player's per-season lines (any games), oldest first."""
     pool = load_pool(min_games=1)

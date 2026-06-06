@@ -95,10 +95,11 @@ def _maybe_refresh_advanced():
     threading.Thread(target=work, daemon=True).start()
 
 
-def tier_sim(tier: str):
-    if tier not in _sim_cache:
-        _sim_cache[tier] = P.tier_odds(season(), tier)
-    return _sim_cache[tier]
+def tier_sim(tier: str, mode: str = "all"):
+    key = (tier, mode)
+    if key not in _sim_cache:
+        _sim_cache[key] = P.tier_odds(season(), tier, mode=mode)
+    return _sim_cache[key]
 
 
 def players_df():
@@ -125,7 +126,8 @@ def tier(tier):
     s = season()
     if tier not in s.tiers:
         return redirect(url_for("index"))
-    sim = tier_sim(tier)
+    mode = "current" if request.args.get("model") == "current" else "all"
+    sim = tier_sim(tier, mode)
     ts = build_tier_state(s, tier)
     summ = sim.summary().set_index("team")
     rows = []
@@ -166,7 +168,7 @@ def tier(tier):
              "conf": sim.title_confidence()} if tb else None
     return render_template("tier.html", tier=tier, k=ts.k, rows=rows,
                            tiers=s.tiers, label=SEASON_LABEL, sched=sched,
-                           champ=champ, title_board=tb, proj=proj)
+                           champ=champ, title_board=tb, proj=proj, mode=mode)
 
 
 @app.route("/tier/<tier>/team/<team>")
@@ -336,7 +338,8 @@ def match_detail():
     def rec(t):
         return (f"{int(st.loc[t].w)}-{int(st.loc[t].l)}" if t in st.index else "0-0")
 
-    mu = P.team_matchup(s, tier, away, home)   # predicts GAME wins (away=a, home=b)
+    mu = P.team_matchup(s, tier, away, home, "all")      # all data (career priors)
+    mu_cur = P.team_matchup(s, tier, away, home, "current")  # this season only
     fav = away if mu["exp_a"] >= mu["exp_b"] else home
     pred_correct = (winner == fav) if (played and winner != "tie") else None
 
@@ -354,7 +357,7 @@ def match_detail():
         "away_g": int(r["away_g"]) if played else None,
         "home_g": int(r["home_g"]) if played else None,
         "rec_a": rec(away), "rec_h": rec(home),
-        "mu": mu, "fav": fav, "pred_correct": pred_correct,
+        "mu": mu, "mu_cur": mu_cur, "fav": fav, "pred_correct": pred_correct,
         "roster_a": roster_a, "roster_h": roster_h,
     }
     return render_template("match.html", tiers=s.tiers, label=SEASON_LABEL, **ctx)

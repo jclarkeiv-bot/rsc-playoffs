@@ -6,6 +6,10 @@
   Regular season: <strong>{{ sched.played }}</strong> of <strong>{{ sched.total }}</strong> matches played
   - <strong>{{ sched.left }}</strong> remaining ({{ sched.left * 4 }} games) before playoffs.
 </p>
+<p class="small mb-2">Prediction model:
+  <a href="{{ url_for('tier', tier=tier, model='all') }}" class="badge text-decoration-none {{ 'text-bg-primary' if mode=='all' else 'text-bg-secondary' }}" title="Current-season form plus each player's career skill from past seasons.">All data</a>
+  <a href="{{ url_for('tier', tier=tier, model='current') }}" class="badge text-decoration-none {{ 'text-bg-primary' if mode=='current' else 'text-bg-secondary' }}" title="This season only - no historical priors.">Current season only</a>
+</p>
 
 {% if champ %}
 {% set cc = {'High':'success','Medium':'warning','Low':'danger'} %}
