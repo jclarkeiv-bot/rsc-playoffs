@@ -132,6 +132,16 @@ def compute_ratings(players: pd.DataFrame) -> pd.DataFrame:
     pool["overskilled"] = (pool["tier_delta"] >= 1) & (pool["tier_z"] >= 1.0)
     pool["underskilled"] = (pool["tier_delta"] <= -1) & (pool["tier_z"] <= -1.0)
 
+    # career skill from past seasons -> confirm overskilled flags vs hot streaks
+    try:
+        from . import comps
+        career = comps.historical_skill()
+    except Exception:
+        career = {}
+    key = pool["Player"].astype(str).str.lower()
+    pool["career_pct"] = key.map(career) if career else np.nan
+    pool["career_confirmed"] = pool["overskilled"] & (pool["career_pct"] >= 65)
+
     pool["_weights"] = [weights] * len(pool)
     return pool
 
@@ -178,6 +188,9 @@ def player_rating(players: pd.DataFrame, name: str) -> dict | None:
         "next_tier": rec["next_tier"],
         "overskilled": bool(rec["overskilled"]),
         "underskilled": bool(rec["underskilled"]),
+        "career_pct": (None if pd.isna(rec.get("career_pct"))
+                       else int(rec["career_pct"])),
+        "career_confirmed": bool(rec.get("career_confirmed")),
         "weights": {k: round(v, 3) for k, v in rec["_weights"].items()},
     }
 
@@ -209,9 +222,12 @@ def overskilled_candidates(players: pd.DataFrame, limit: int = 80) -> pd.DataFra
     outliers) - genuinely too good for their tier, not just 'best in tier'."""
     r = compute_ratings(players)
     r = r[r["overskilled"]]
-    r = r.sort_values(["tier_delta", "tier_z"], ascending=False).head(limit)
+    # career-confirmed candidates first, then by how far they project up
+    r = r.sort_values(["career_confirmed", "tier_delta", "tier_z"],
+                      ascending=False).head(limit)
     return r[["Player", "Tier", "Team", "GP", "OVR", "tier_z", "tier_pct",
-              "projected_tier", "tier_delta"]].reset_index(drop=True)
+              "projected_tier", "tier_delta", "career_pct",
+              "career_confirmed"]].reset_index(drop=True)
 
 
 if __name__ == "__main__":

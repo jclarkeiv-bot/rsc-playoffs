@@ -57,6 +57,36 @@ def _zcols(pool: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     return z, cols
 
 
+SEASON_STAT_OPTS = {"goals": "Goals/g", "assists": "Assists/g",
+                    "saves": "Saves/g", "shots": "Shots/g", "score": "Score/g",
+                    "demos_inflicted": "Demos/g", "boost_per_min": "Boost/min",
+                    "avg_speed": "Avg speed"}
+
+
+def seasons() -> list[str]:
+    pool = load_pool(min_games=1)
+    if pool.empty:
+        return []
+    return sorted(pool["season"].unique(),
+                  key=lambda s: int(s[1:]) if s[1:].isdigit() else 0, reverse=True)
+
+
+def season_leaderboard(season: str, stat: str = "goals", tier: str = "all",
+                       min_games: int = 8, limit: int = 100) -> list[dict]:
+    """Per-game leaderboard for any harvested season, from the historical pool."""
+    pool = load_pool(min_games=min_games)
+    sub = pool[pool["season"] == season].copy()
+    if tier != "all":
+        sub = sub[sub["tier"] == tier]
+    if stat not in sub.columns:
+        stat = "goals"
+    sub = sub.sort_values(stat, ascending=False).head(limit).reset_index(drop=True)
+    sub.insert(0, "rank", sub.index + 1)
+    out = sub[["rank", "Player", "tier", "games", stat]].rename(
+        columns={stat: "value", "tier": "Tier", "games": "GP"})
+    return out.round(2).to_dict("records")
+
+
 def find_comparables(name: str, season: str = "S26", k: int = 10) -> dict | None:
     pool = load_pool()
     if pool.empty:

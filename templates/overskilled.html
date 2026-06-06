@@ -31,6 +31,7 @@
     <th title="Standard deviations above the player's tier average on the composite rating. Higher = bigger outlier.">Tier dominance</th>
     <th title="Overall Rating: league percentile of cross-tier skill (within-tier dominance + tier-strength bonus).">Overall rating</th>
     <th title="The tier this player's cross-tier skill would place them in if all players were re-sorted by ability.">Projects to</th>
+    <th title="Whether the player's multi-season career skill backs up the flag - separates proven talents from hot streaks.">Career</th>
   </tr></thead>
   <tbody>
   {% for r in rows %}
@@ -42,6 +43,11 @@
       <td>+{{ '%.1f'|format(r.tier_z) }} SD <span class="text-secondary">({{ r.tier_pct|int }}th)</span></td>
       <td>{{ r.OVR|int }}</td>
       <td><span class="badge text-bg-info">&uarr; {{ r.projected_tier }}</span></td>
+      <td>
+        {% if r.career_confirmed %}<span class="badge text-bg-success" title="Strong multi-season track record - a proven promotion candidate.">&check; proven ({{ r.career_pct|int }}th)</span>
+        {% elif r.career_pct is not none %}<span class="text-secondary">{{ r.career_pct|int }}th career</span>
+        {% else %}<span class="text-secondary">no history</span>{% endif %}
+      </td>
     </tr>
   {% endfor %}
   </tbody>

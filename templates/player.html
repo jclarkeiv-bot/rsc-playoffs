@@ -31,7 +31,7 @@
   <span class="badge text-bg-secondary" title="Where this player ranks within their own tier on the composite, and how many SDs above the tier average they sit.">Tier dominance: {{ rat.tier_pct }}th ({{ '+%.1f'|format(rat.tier_z) if rat.tier_z >= 0 else '%.1f'|format(rat.tier_z) }} SD)</span>
   <span class="badge text-bg-dark" title="The tier this player's cross-tier skill projects into if everyone were re-sorted by ability. A model estimate.">Projects as: {{ rat.projected_tier }}</span>
   {% if rat.overskilled %}
-    <span class="badge text-bg-warning" title="A within-tier outlier whose skill projects a tier higher - genuinely too good for this tier, not merely top of it.">&uarr; Overskilled for {{ rat.tier }}</span>
+    <span class="badge text-bg-warning" title="A within-tier outlier whose skill projects a tier higher - genuinely too good for this tier, not merely top of it.{% if rat.career_confirmed %} Backed by a strong multi-season career.{% endif %}">&uarr; Overskilled for {{ rat.tier }}{% if rat.career_confirmed %} &check; career-proven{% endif %}</span>
   {% elif rat.underskilled %}
     <span class="badge text-bg-info" title="Skill projects a tier lower than their current tier.">&darr; Below tier level</span>
   {% endif %}

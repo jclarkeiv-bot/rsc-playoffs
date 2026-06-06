@@ -4,6 +4,12 @@
 <h1 class="h3">Player Rankings</h1>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
+    <label class="form-label small">Season</label>
+    <select name="season" class="form-select" onchange="this.form.submit()">
+      {% for sv in seasons %}<option value="{{ sv }}" {{ 'selected' if sv==sel_season }}>{{ sv }}{{ ' (current)' if sv==label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
     <label class="form-label small">Tier</label>
     <select name="tier" class="form-select" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
@@ -18,6 +24,7 @@
       {% endfor %}
     </select>
   </div>
+  {% if not historical %}
   <div class="col-auto">
     <label class="form-label small">Mode</label>
     <select name="mode" class="form-select" onchange="this.form.submit()">
@@ -25,6 +32,7 @@
       <option value="total" {{ 'selected' if not per_game }}>Total</option>
     </select>
   </div>
+  {% endif %}
   <div class="col-auto">
     <label class="form-label small" title="Only include players with at least this many games played.">Min games</label>
     <input type="number" name="min_games" value="{{ min_games }}" min="1" max="40" class="form-control" style="width:6rem">
@@ -33,14 +41,16 @@
 </form>
 
 <p class="text-secondary small">
-  Top {{ rows|length }} by <strong>{{ stat_label }}</strong>
-  ({{ 'per game' if per_game else 'total' }}){{ ' - ' ~ tier if tier != 'all' }}.
+  {{ sel_season }}{{ ' (current)' if sel_season == label }} -
+  top {{ rows|length }} by <strong>{{ stat_label }}</strong>{{ ' - ' ~ tier if tier != 'all' }}.
+  {% if historical %}<br>Past seasons come from harvested replay history (per-game stats; OVR is current-season only).{% endif %}
 </p>
 
 <table class="table table-hover table-sm mono">
   <thead><tr>
-    <th>#</th><th>Player</th><th>Tier</th><th>Team</th><th title="Games Played (each match day is a 4-game series)">Games</th>
-    <th class="text-end">{{ stat_label }}{{ '/g' if per_game }}</th>
+    <th>#</th><th>Player</th><th>Tier</th>{% if not historical %}<th>Team</th>{% endif %}
+    <th title="Games Played (each match day is a 4-game series)">Games</th>
+    <th class="text-end">{{ stat_label }}</th>
   </tr></thead>
   <tbody>
   {% for r in rows %}
@@ -48,11 +58,12 @@
       <td>{{ r.rank }}</td>
       <td><a href="{{ url_for('player', name=r.Player) }}" class="fw-semibold">{{ r.Player }}</a></td>
       <td>{{ r.Tier }}</td>
-      <td><a href="{{ url_for('team', tier=r.Tier, team=r.Team) }}">{{ r.Team }}</a></td>
+      {% if not historical %}<td><a href="{{ url_for('team', tier=r.Tier, team=r.Team) }}">{{ r.Team }}</a></td>{% endif %}
       <td>{{ r.GP }}</td>
       <td class="text-end">
         {% if stat == 'SH%' %}{{ '%.1f'|format(r.value*100) }}%
-        {% elif per_game %}{{ '%.2f'|format(r.value) }}
+        {% elif stat == 'OVR' %}{{ r.value|int }}
+        {% elif historical or per_game %}{{ '%.2f'|format(r.value) }}
         {% else %}{{ r.value|int }}{% endif %}
       </td>
     </tr>

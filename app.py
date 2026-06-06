@@ -406,18 +406,39 @@ def stat_impact():
 @app.route("/rankings")
 def rankings():
     s = season()
+    season_list = comps.seasons() if comps.available() else []
+    if SEASON_LABEL not in season_list:
+        season_list = [SEASON_LABEL] + season_list
+    sel = request.args.get("season", SEASON_LABEL)
+    if sel not in season_list:
+        sel = SEASON_LABEL
     tier = request.args.get("tier", "all")
-    stat = request.args.get("stat", "Pts")
-    per_game = request.args.get("mode", "pg") == "pg"
     min_games = request.args.get("min_games", 1, type=int) or 1
-    board = profiles.leaderboard(tier=tier, stat=stat, per_game=per_game,
-                                 limit=100, min_games=min_games)
-    return render_template("rankings.html", tiers=s.tiers, tier=tier, stat=stat,
-                           per_game=per_game, min_games=min_games,
-                           rows=board.to_dict("records"),
-                           stat_opts=profiles.LEADERBOARD_STATS,
-                           stat_label=profiles.LEADERBOARD_STATS.get(stat, ("Points",))[0],
-                           label=SEASON_LABEL)
+    common = dict(tiers=s.tiers, tier=tier, min_games=min_games,
+                  seasons=season_list, sel_season=sel, label=SEASON_LABEL)
+
+    if sel == SEASON_LABEL:                  # current season - live, full stats + OVR
+        stat = request.args.get("stat", "OVR")
+        if stat not in profiles.LEADERBOARD_STATS:
+            stat = "OVR"
+        per_game = request.args.get("mode", "pg") == "pg"
+        board = profiles.leaderboard(tier=tier, stat=stat, per_game=per_game,
+                                     limit=100, min_games=min_games)
+        return render_template("rankings.html", historical=False,
+                               rows=board.to_dict("records"), stat=stat,
+                               stat_col=stat, per_game=per_game,
+                               stat_opts=profiles.LEADERBOARD_STATS,
+                               stat_label=profiles.LEADERBOARD_STATS[stat][0],
+                               **common)
+    # past season - from harvested history (per-game stats, no OVR)
+    stat = request.args.get("stat", "goals")
+    if stat not in comps.SEASON_STAT_OPTS:
+        stat = "goals"
+    rows = comps.season_leaderboard(sel, stat, tier, min_games, 100)
+    return render_template("rankings.html", historical=True, rows=rows, stat=stat,
+                           per_game=True,
+                           stat_opts={k: (v,) for k, v in comps.SEASON_STAT_OPTS.items()},
+                           stat_label=comps.SEASON_STAT_OPTS[stat], **common)
 
 
 _PROJ_STAT_OPTS = {"G": "Goals", "A": "Assists", "S": "Saves", "Pts": "Points",
