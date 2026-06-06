@@ -366,8 +366,9 @@ def match_detail():
 @app.route("/balance")
 def tier_balance():
     d = balance_mod.diagnose(profiles.players())
-    return render_template("balance.html", d=d, tiers=season().tiers,
-                           label=SEASON_LABEL)
+    sb = balance_mod.season_balance()
+    return render_template("balance.html", d=d, season_balance=sb,
+                           tiers=season().tiers, label=SEASON_LABEL)
 
 
 @app.route("/balance/<tier>")

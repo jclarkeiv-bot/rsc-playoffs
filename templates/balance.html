@@ -75,4 +75,30 @@
   </tbody>
 </table>
 <p class="text-secondary small">Overall, {{ d.movement.moved }} of {{ d.movement.total }} measured players ({{ d.movement.churn }}%) sit in a tier their skill doesn't match - a low number means the league is well sorted.</p>
+
+{% if season_balance %}
+<h2 class="h5 mt-4">3. Which seasons were most balanced? <small class="text-secondary">(history)</small></h2>
+<p class="text-secondary small">
+  How cleanly tiers separated by skill (mechanics) in each season, from the historical pool.
+  <strong>Overlap</strong> is the average share of a lower tier that out-performs the tier above it -
+  <strong>lower = cleaner separation = better-sorted/more balanced</strong>. Mechanics are standardized
+  within each season, so the numbers compare fairly across seasons. Sorted most-balanced first.
+</p>
+<table class="table table-sm table-hover mono" style="max-width:560px;">
+  <thead><tr><th>Season</th><th>Players</th><th>Tiers</th><th>Tier overlap</th></tr></thead>
+  <tbody>
+  {% for r in season_balance %}
+    <tr{% if loop.first %} class="table-success-subtle"{% elif loop.last %} class="table-warning-subtle"{% endif %}>
+      <td class="fw-semibold">{{ r.season }}{% if r.season == label %} <span class="badge text-bg-secondary">current</span>{% endif %}</td>
+      <td>{{ r.players }}</td><td>{{ r.tiers }}</td>
+      <td>{{ r.avg_overlap|int }}%
+        {% if loop.first %}<span class="badge text-bg-success">most balanced</span>
+        {% elif loop.last %}<span class="badge text-bg-warning">least balanced</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">"Balanced" here means tiers are cleanly separated by skill (players sorted into the right level), not competitive parity within a tier.</p>
+{% endif %}
 {% endblock %}

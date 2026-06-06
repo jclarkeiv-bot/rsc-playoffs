@@ -98,6 +98,46 @@ def projected_movement(players: pd.DataFrame) -> dict:
             "churn": round((tot_up + tot_down) / tot * 100) if tot else 0}
 
 
+def season_balance() -> list[dict]:
+    """How cleanly tiers separated by skill in EACH season (from the historical
+    pool). 'Avg overlap' = mean share of a lower tier that beats the tier above's
+    median mechanics - lower means tiers are more cleanly sorted (more balanced).
+    Mechanics are standardized within each season, so the overlap is comparable
+    across seasons even if the game's scales drifted."""
+    from . import comps
+    pool = comps.load_pool(min_games=8)
+    if pool.empty:
+        return []
+    feats = [f for f in ("avg_speed", "pct_supersonic", "boost_per_min", "boost_stolen")
+             if f in pool.columns]
+    rows = []
+    for season in pool["season"].unique():
+        sub = pool[pool["season"] == season].copy()
+        if len(sub) < 30:
+            continue
+        skill = pd.Series(0.0, index=sub.index)
+        for f in feats:
+            sd = sub[f].std(ddof=0)
+            if sd and sd > 0:
+                skill += (sub[f] - sub[f].mean()) / sd
+        sub["skill"] = skill
+        tiers = [t for t in TIER_ORDER if (sub["tier"] == t).sum() >= 5]
+        if len(tiers) < 3:
+            continue
+        means = [sub.loc[sub["tier"] == t, "skill"].mean() for t in tiers]
+        overlaps = []
+        for i in range(len(tiers) - 1):
+            hi = sub.loc[sub["tier"] == tiers[i], "skill"]
+            lo = sub.loc[sub["tier"] == tiers[i + 1], "skill"]
+            overlaps.append(float((lo > hi.median()).mean()) * 100)
+        order_corr = float(np.corrcoef(range(len(means)), means)[0, 1]) if len(means) > 2 else 0.0
+        rows.append({"season": season, "players": int(len(sub)),
+                     "tiers": len(tiers),
+                     "avg_overlap": round(float(np.mean(overlaps)), 0),
+                     "order_corr": round(order_corr, 2)})
+    return sorted(rows, key=lambda r: r["avg_overlap"])
+
+
 def diagnose(players: pd.DataFrame) -> dict:
     sep = mechanics_separation()
     mov = projected_movement(players)
