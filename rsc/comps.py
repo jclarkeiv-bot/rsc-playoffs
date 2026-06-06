@@ -142,6 +142,30 @@ def historical_skill() -> dict:
     return {k: float(v) for k, v in g.items()}
 
 
+# history column -> projection stat column
+_HIST_TO_PROJ = {"goals": "G", "assists": "A", "saves": "S",
+                 "shots": "SH", "demos_inflicted": "DM"}
+
+
+def career_rates(name: str) -> dict:
+    """A player's games-weighted per-game rates across COMPLETED past seasons,
+    keyed by projection stat (G/A/S/SH/DM). Empty if they have no history."""
+    pool = load_pool(min_games=8)
+    if pool.empty:
+        return {}
+    past = pool[(pool["season"] != CURRENT_SEASON)
+                & (pool["Player"].astype(str).str.lower() == name.lower())]
+    if past.empty:
+        return {}
+    g = past["games"].astype(float)
+    rates = {}
+    for hist_col, proj_col in _HIST_TO_PROJ.items():
+        if hist_col in past:
+            rates[proj_col] = float((past[hist_col] * g).sum() / g.sum())
+    return {"rates": rates, "games": int(g.sum()),
+            "seasons": int(past["season"].nunique())}
+
+
 def player_history(name: str) -> list[dict]:
     """A player's per-season lines (any games), oldest first."""
     pool = load_pool(min_games=1)

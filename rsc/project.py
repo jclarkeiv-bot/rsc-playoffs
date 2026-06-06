@@ -23,7 +23,8 @@ _PROJ_STATS = [("Points", "Pts"), ("Goals", "G"), ("Assists", "A"),
 _Z80 = 1.2816  # 80% two-sided
 
 
-REGRESS_K = 8   # games of "tier-average prior" mixed into each rate estimate
+REGRESS_K = 8    # games of "tier-average prior" mixed into each rate estimate
+CAREER_K = 12    # weight of a player's career rate in the all-data projection
 
 
 def _confidence(season_frac: float, gp: int, team_games: int) -> str:
@@ -60,17 +61,26 @@ def project_player(players: pd.DataFrame, variables: pd.DataFrame,
     n_rem = max(proj_gp - gp, 0)
 
     pool = pg[pg["Tier"] == tier]            # tier peers, for the mean (prior)
+    from . import comps                       # career baseline from past seasons
+    career = comps.career_rates(name)
+    career_rates = career.get("rates", {}) if career else {}
 
     projections = []
     for label, col in _PROJ_STATS:
         x = float(rec[col])
         r = x / gp if gp else 0.0                          # raw per-game rate
         mu = float(pool[f"{col}/g"].mean())                # tier-average rate
-        # regression to the mean: blend the player's rate with the tier prior,
-        # weighted by sample size. Few games -> trust the tier average more.
+        # current-only: blend the player's rate with the tier prior (sample-weighted)
         r_adj = (gp * r + REGRESS_K * mu) / (gp + REGRESS_K)
         pace = x + r * n_rem                               # naive extrapolation
         proj = x + r_adj * n_rem                           # regression-adjusted
+        # all-data: regress toward the player's own CAREER rate where we have it
+        cr = career_rates.get(col)
+        if cr is not None:
+            r_all = (gp * r + CAREER_K * cr) / (gp + CAREER_K)
+        else:
+            r_all = r_adj
+        proj_all = x + r_all * n_rem
         # variance: Poisson on remaining games at the adjusted rate + rate SE
         se_rate = math.sqrt(r_adj / (gp + REGRESS_K)) if r_adj > 0 else 0.0
         var_total = n_rem * r_adj + (n_rem * se_rate) ** 2
@@ -81,6 +91,8 @@ def project_player(players: pd.DataFrame, variables: pd.DataFrame,
             "label": label, "current": int(x),
             "per_game": round(r, 2), "tier_avg": round(mu, 2),
             "pace": round(pace), "proj": round(proj),
+            "career": round(cr, 2) if cr is not None else None,
+            "proj_all": round(proj_all),
             "low": round(lo), "high": round(hi),
         })
 
@@ -91,6 +103,9 @@ def project_player(players: pd.DataFrame, variables: pd.DataFrame,
         "season_pct": round(season_frac * 100),
         "confidence": _confidence(season_frac, gp, team_games_played),
         "regress_k": REGRESS_K,
+        "has_career": bool(career_rates),
+        "career_games": career.get("games") if career else 0,
+        "career_seasons": career.get("seasons") if career else 0,
         "projections": projections,
     }
 

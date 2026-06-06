@@ -106,28 +106,28 @@
 </div>
 <p class="text-secondary small">
   {{ proj.season_pct }}% of the season is played ({{ proj.gp }} &rarr; ~{{ proj.proj_gp }} games).
-  <strong>Projected</strong> uses <em>regression to the mean</em>: the current rate is blended with the
-  tier average (worth ~{{ proj.regress_k }} games), so small-sample hot/cold starts get pulled toward
-  normal until proven. <strong>Pace</strong> is the naive "keep current rate" number for comparison.
-  Range = 80% prediction interval.
+  <strong>Projected (this season)</strong> blends the current rate with the tier average (regression to the mean).
+  {% if proj.has_career %}<strong>Projected (all data)</strong> instead regresses toward the player&rsquo;s own
+  career rate ({{ proj.career_games }} games across {{ proj.career_seasons }} past seasons){% endif %}.
+  <strong>Pace</strong> is the naive "keep current rate" number. Range = 80% prediction interval on the this-season projection.
 </p>
 <table class="table table-sm mono">
   <thead><tr>
     <th>Stat</th>
     <th title="Total accumulated so far this season.">Now</th>
-    <th class="text-secondary" title="The tier's average per-game rate for this stat - the 'prior' the projection regresses toward.">Tier avg/g</th>
     <th class="text-secondary" title="Naive projection: keep the current per-game rate for every remaining game.">Pace</th>
-    <th title="Regression-adjusted projection: blends the player's rate with the tier average (worth ~8 games) so small-sample hot/cold streaks pull toward normal.">Projected</th>
-    <th class="text-secondary" title="80% prediction interval - there's an ~80% chance the final total lands in this range.">80% range</th>
+    <th title="Regression-adjusted to the tier average - this season only.">Projected (season)</th>
+    {% if proj.has_career %}<th title="Regression-adjusted to this player's own career rate from past seasons.">Projected (all data)</th>{% endif %}
+    <th class="text-secondary" title="80% prediction interval on the this-season projection.">80% range</th>
   </tr></thead>
   <tbody>
   {% for pr in proj.projections %}
     <tr>
       <td>{{ pr.label }}</td>
       <td>{{ pr.current }}</td>
-      <td class="text-secondary">{{ pr.tier_avg }}</td>
       <td class="text-secondary">{{ pr.pace }}</td>
       <td class="fw-semibold">{{ pr.proj }}</td>
+      {% if proj.has_career %}<td class="fw-semibold" title="{{ 'career rate ' ~ pr.career ~ '/g' if pr.career is not none else 'no career data for this stat' }}">{{ pr.proj_all if pr.career is not none else pr.proj }}</td>{% endif %}
       <td class="text-secondary">{{ pr.low }} &ndash; {{ pr.high }}</td>
     </tr>
   {% endfor %}
