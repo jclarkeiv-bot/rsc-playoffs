@@ -78,6 +78,26 @@ def model_confidence(season: Season) -> dict:
     return confidence(backtest(season.matches))
 
 
+def team_career_priors(season: Season, scale: float = 4.0) -> dict:
+    """Starting Elo per (tier, team) from each roster's career skill (past
+    seasons). A legitimate pre-season prior, used to test whether history
+    improves predictions vs starting everyone at 1500."""
+    import pandas as pd
+    from . import profiles, comps
+    try:
+        skill = comps.historical_skill()
+    except Exception:
+        skill = {}
+    if not skill:
+        return {}
+    pl = profiles.players()
+    pl = pl[pl["GP"] >= 1].copy()
+    pl["career"] = pl["Player"].astype(str).str.lower().map(skill)
+    g = pl.groupby(["Tier", "Team"])["career"].mean()
+    return {(tier, team): 1500.0 + (v - 50.0) * scale
+            for (tier, team), v in g.items() if pd.notna(v)}
+
+
 @dataclass
 class Outlook:
     team: str

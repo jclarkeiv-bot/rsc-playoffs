@@ -385,14 +385,23 @@ def balance_tier(tier):
 def accuracy():
     from rsc.engine.predict import accuracy_by_matchday
     s = season()
-    acc = accuracy_by_matchday(s.matches)
+    acc = accuracy_by_matchday(s.matches)                      # current only
+    prior = P.team_career_priors(s)
+    acc_all = accuracy_by_matchday(s.matches, prior=prior) if prior else None
     chart = {
         "labels": [r["match_day"] for r in acc["rows"]],
-        "game": [r["game_acc"] for r in acc["rows"]],
         "cum_game": [r["cum_game_acc"] for r in acc["rows"]],
+        "cum_all": ([r["cum_game_acc"] for r in acc_all["rows"]]
+                    if acc_all else None),
     }
-    return render_template("accuracy.html", acc=acc, chart=chart,
-                           tiers=s.tiers, label=SEASON_LABEL)
+    early_delta = full_delta = None
+    if acc_all and acc["rows"] and acc_all["rows"]:
+        early_delta = round(acc_all["rows"][0]["cum_game_acc"]
+                            - acc["rows"][0]["cum_game_acc"], 1)
+        full_delta = round(acc_all["overall_game_acc"] - acc["overall_game_acc"], 1)
+    return render_template("accuracy.html", acc=acc, acc_all=acc_all,
+                           early_delta=early_delta, full_delta=full_delta,
+                           chart=chart, tiers=s.tiers, label=SEASON_LABEL)
 
 
 @app.route("/stat-impact")

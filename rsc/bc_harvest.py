@@ -91,7 +91,8 @@ def harvest_season(label: str, log=lambda *_: None) -> pd.DataFrame:
         reg_id = deeper
     leaves = _tier_leaves(bc, reg_id, log)
     log(f"{label}: {len(leaves)} match groups")
-    acc = defaultdict(lambda: {"games": 0, "name": None, "tiers": Counter(),
+    acc = defaultdict(lambda: {"games": 0, "name": None, "sid": "",
+                               "tiers": Counter(),
                                **{m[0]: 0.0 for m in HIST_METRICS}})
     for i, (gid, tier) in enumerate(leaves, 1):
         try:
@@ -103,9 +104,13 @@ def harvest_season(label: str, log=lambda *_: None) -> pd.DataFrame:
             games = p.get("cumulative", {}).get("games", 0) or 0
             if not name or games == 0:
                 continue
+            sid = p.get("id")                    # steam id - stable across seasons
+            sid = str(sid) if sid else ""
+            key = sid or name.lower()            # key by steam id when present
             ga = p.get("game_average", {})
-            rec = acc[name.lower()]
+            rec = acc[key]
             rec["name"] = name
+            rec["sid"] = sid
             rec["games"] += games
             rec["tiers"][tier] += games
             for col, cat, field in HIST_METRICS:
@@ -119,8 +124,8 @@ def harvest_season(label: str, log=lambda *_: None) -> pd.DataFrame:
         g = rec["games"]
         if g < 1:
             continue
-        row = {"Player": rec["name"], "season": label, "games": g,
-               "tier": rec["tiers"].most_common(1)[0][0]}
+        row = {"Player": rec["name"], "sid": rec["sid"], "season": label,
+               "games": g, "tier": rec["tiers"].most_common(1)[0][0]}
         for col, _, _ in HIST_METRICS:
             row[col] = round(rec[col] / g, 3)
         rows.append(row)

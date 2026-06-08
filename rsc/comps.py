@@ -44,6 +44,38 @@ def reload() -> None:
     _cache.clear()
 
 
+def _has_sid(pool: pd.DataFrame) -> bool:
+    return "sid" in pool.columns and pool["sid"].astype(str).str.len().gt(5).any()
+
+
+def _name_to_sid() -> dict:
+    """Current-season display name (lower) -> steam id, for linking a current
+    player to their (steam-id-keyed) history across seasons."""
+    if "n2s" not in _cache:
+        pool = load_pool(min_games=1)
+        if pool.empty or not _has_sid(pool):
+            _cache["n2s"] = {}
+        else:
+            cur = pool[pool["season"] == CURRENT_SEASON].sort_values(
+                "games", ascending=False).drop_duplicates("Player")
+            _cache["n2s"] = {str(r.Player).lower(): str(r.sid)
+                             for r in cur.itertuples()
+                             if r.sid and len(str(r.sid)) > 5}
+    return _cache["n2s"]
+
+
+def _rows_for(pool: pd.DataFrame, name: str, past_only: bool):
+    """Rows for a player across seasons - by steam id when available, else name."""
+    sid = _name_to_sid().get(name.lower())
+    if sid and _has_sid(pool):
+        r = pool[pool["sid"].astype(str) == sid]
+    else:
+        r = pool[pool["Player"].astype(str).str.lower() == name.lower()]
+    if past_only:
+        r = r[r["season"] != CURRENT_SEASON]
+    return r
+
+
 def _zcols(pool: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     z = pool.copy()
     cols = []
@@ -168,6 +200,11 @@ def historical_skill() -> dict:
     if past.empty:
         return {}
     past["pct"] = past.groupby("season")["score"].rank(pct=True) * 100
+    if _has_sid(pool):                          # link by steam id (name-change proof)
+        by_sid = past[past["sid"].astype(str).str.len() > 5].groupby(
+            past["sid"].astype(str))["pct"].mean()
+        return {nm: float(by_sid[sid]) for nm, sid in _name_to_sid().items()
+                if sid in by_sid.index}
     g = past.groupby(past["Player"].astype(str).str.lower())["pct"].mean()
     return {k: float(v) for k, v in g.items()}
 
@@ -183,8 +220,7 @@ def career_rates(name: str) -> dict:
     pool = load_pool(min_games=8)
     if pool.empty:
         return {}
-    past = pool[(pool["season"] != CURRENT_SEASON)
-                & (pool["Player"].astype(str).str.lower() == name.lower())]
+    past = _rows_for(pool, name, past_only=True)
     if past.empty:
         return {}
     g = past["games"].astype(float)
@@ -201,7 +237,7 @@ def player_history(name: str) -> list[dict]:
     pool = load_pool(min_games=1)
     if pool.empty:
         return []
-    r = pool[pool["Player"].astype(str) == name].sort_values("season")
+    r = _rows_for(pool, name, past_only=False).sort_values("season")
     cols = ["season", "tier", "games", "goals", "assists", "saves", "shots",
             "score", "boost_per_min", "avg_speed"]
     return r[[c for c in cols if c in r.columns]].round(2).to_dict("records")

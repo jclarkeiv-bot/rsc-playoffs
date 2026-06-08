@@ -145,13 +145,19 @@ def backtest(matches: pd.DataFrame, k: float = 16.0) -> dict[str, Score]:
             for name, (n, brier, ll) in tot.items()}
 
 
-def accuracy_by_matchday(matches: pd.DataFrame, k: float = 16.0) -> dict:
+def accuracy_by_matchday(matches: pd.DataFrame, k: float = 16.0,
+                         prior: dict | None = None) -> dict:
     """Walk-forward accuracy bucketed by match day. For each played regular
     series, the Elo model (trained only on EARLIER games) predicts the winner;
     we score hit-rate + game-level Brier, grouped by match day, so you can see
     the model getting sharper as the season fills in.
+
+    `prior` seeds starting Elo (e.g. from career skill) - a legitimate pre-season
+    signal, so comparing prior vs no-prior is a fair backtest of "does history help".
     """
     r: dict[tuple[str, str], float] = defaultdict(lambda: ELO_BASE)
+    if prior:
+        r.update(prior)
     buckets: dict[int, list[float]] = {}   # md -> [series, hits, brier, games]
 
     for m in _chrono(matches).itertuples(index=False):

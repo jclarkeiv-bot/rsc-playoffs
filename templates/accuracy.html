@@ -12,21 +12,37 @@
 
 <div class="row g-3 mb-3">
   <div class="col-sm-4"><div class="card"><div class="card-body text-center">
-    <div class="text-secondary small">Game-level accuracy</div>
+    <div class="text-secondary small">Current season only</div>
     <div class="display-6 mono">{{ acc.overall_game_acc }}%</div>
-    <div class="text-secondary small">of {{ acc.total_games }} games - vs 50% coin</div>
+    <div class="text-secondary small">game accuracy - {{ acc.total_games }} games</div>
+  </div></div></div>
+  <div class="col-sm-4"><div class="card border-primary"><div class="card-body text-center">
+    <div class="text-secondary small">All data <span title="Elo seeded from each roster's career skill (past seasons) - a legitimate pre-season prior.">(career prior)</span></div>
+    <div class="display-6 mono">{{ acc_all.overall_game_acc if acc_all else '-' }}%</div>
+    <div class="text-secondary small">game accuracy</div>
   </div></div></div>
   <div class="col-sm-4"><div class="card"><div class="card-body text-center">
-    <div class="text-secondary small">Series win-rate <span title="Less meaningful - the league rewards total game wins, not match wins.">(secondary)</span></div>
-    <div class="display-6 mono">{{ acc.overall_hit_rate }}%</div>
-    <div class="text-secondary small">of {{ acc.total_series }} decisive series</div>
-  </div></div></div>
-  <div class="col-sm-4"><div class="card"><div class="card-body text-center">
-    <div class="text-secondary small">Edge over coin flip</div>
-    <div class="display-6 mono">+{{ '%.1f'|format(acc.overall_game_acc - 50) }}</div>
-    <div class="text-secondary small">percentage points (games)</div>
+    <div class="text-secondary small">Does history help?</div>
+    {% if early_delta is not none %}
+    <div class="display-6 mono {{ 'text-success' if early_delta > 0 else 'text-danger' if early_delta < 0 else '' }}">{{ '%+.1f'|format(early_delta) }}</div>
+    <div class="text-secondary small">match day 1 &middot; full season {{ '%+.1f'|format(full_delta) }}</div>
+    {% else %}<div class="display-6 mono">-</div><div class="text-secondary small">no history</div>{% endif %}
   </div></div></div>
 </div>
+{% if early_delta is not none %}
+<div class="alert {{ 'alert-success' if early_delta > 0.5 else 'alert-secondary' }} py-2 small">
+  <strong>Finding:</strong> the career prior helps the <em>cold start</em> ({{ '%+.1f'|format(early_delta) }} pts at match day 1, before this season has data) but
+  {{ 'fades to roughly neutral' if full_delta|abs < 0.5 else ('slightly hurts (' ~ '%+.1f'|format(full_delta) ~ ' pts)') }} over the full season as current-season form takes over.
+  History is a useful early-season anchor, not a season-long edge - which is why the live model fades it as games accumulate.
+</div>
+{% endif %}
+<p class="text-secondary small">
+  Honest A/B test of the two models, walk-forward. <strong>Current season only</strong> starts every team
+  at the same rating; <strong>all data</strong> seeds each team from its roster's career skill from past
+  seasons (a pre-season signal, so it's a fair test). The biggest difference should show up <em>early</em>
+  in the season, before this year's results accumulate. "Series win-rate" matters less since standings
+  reward total game wins ({{ acc.overall_hit_rate }}% current).
+</p>
 
 <canvas id="acc" height="110"></canvas>
 <table class="table table-sm mono mt-4" style="max-width:640px;">
@@ -61,10 +77,10 @@ new Chart(document.getElementById('acc'), {
   data: {
     labels: {{ chart.labels|tojson }},
     datasets: [
-      { label: 'Game accuracy that match day', data: {{ chart.game|tojson }},
-        borderColor:'#4263eb', backgroundColor:'rgba(66,99,235,.12)', tension:.3, pointRadius:3 },
-      { label: 'Cumulative game accuracy', data: {{ chart.cum_game|tojson }},
-        borderColor:'#37b24d', borderDash:[6,4], tension:.3, pointRadius:2 }
+      { label: 'Cumulative accuracy - current season only', data: {{ chart.cum_game|tojson }},
+        borderColor:'#868e96', tension:.3, pointRadius:2 },
+      {% if chart.cum_all %}{ label: 'Cumulative accuracy - all data (career prior)', data: {{ chart.cum_all|tojson }},
+        borderColor:'#4263eb', backgroundColor:'rgba(66,99,235,.12)', fill:true, tension:.3, pointRadius:3 }{% endif %}
     ]
   },
   options: {
