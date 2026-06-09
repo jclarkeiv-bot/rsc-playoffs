@@ -238,10 +238,29 @@ def player(name):
     history = comps.player_history(name) if comps.available() else []
     comp = comps.find_comparables(name, "S26") if comps.available() else None
     fc = comps.forecast(name) if comps.available() else None
+    career_cid = comps.career_cid_for_name(name) if comps.available() else None
+    career = comps.career_for(career_cid) if career_cid else None
     return render_template("player.html", prof=prof, name=name, proj=proj,
                            ranks=ranks, rat=rat, adv=adv, role=role,
                            history=history, comp=comp, fc=fc,
+                           career_cid=career_cid, career=career,
                            tiers=season().tiers, label=SEASON_LABEL)
+
+
+@app.route("/careers")
+def careers():
+    cs = comps.multi_name_careers() if comps.available() else []
+    return render_template("careers.html", careers=cs, tiers=season().tiers,
+                           label=SEASON_LABEL)
+
+
+@app.route("/career/<path:cid>")
+def career(cid):
+    c = comps.career_for(cid) if comps.available() else None
+    if not c:
+        return redirect(url_for("careers"))
+    return render_template("career.html", c=c, tiers=season().tiers,
+                           label=SEASON_LABEL)
 
 
 @app.route("/overskilled")

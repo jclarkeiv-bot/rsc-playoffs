@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -45,14 +46,26 @@ class Ballchasing:
         cp = self._cache_path(url)
         if cp.exists() and (time.time() - cp.stat().st_mtime) < ttl:
             return json.loads(cp.read_text(encoding="utf-8"))
-        # rate limit
-        wait = MIN_INTERVAL - (time.time() - _last_call[0])
-        if wait > 0:
-            time.sleep(wait)
         req = urllib.request.Request(url, headers={"Authorization": self.token})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        _last_call[0] = time.time()
+        for attempt in range(6):
+            wait = MIN_INTERVAL - (time.time() - _last_call[0])
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = json.loads(r.read().decode("utf-8"))
+                _last_call[0] = time.time()
+                break
+            except urllib.error.HTTPError as e:
+                _last_call[0] = time.time()
+                if e.code == 429:                       # rate limited - back off
+                    ra = e.headers.get("Retry-After")
+                    delay = float(ra) if ra and ra.isdigit() else min(2 ** attempt, 30)
+                    time.sleep(delay + 0.5)
+                    continue
+                raise
+        else:
+            raise RuntimeError(f"ballchasing 429: gave up after retries on {url}")
         cp.write_text(json.dumps(data), encoding="utf-8")
         return data
 

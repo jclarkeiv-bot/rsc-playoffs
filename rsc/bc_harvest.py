@@ -79,16 +79,19 @@ def _tier_leaves(bc, reg_id, log=lambda *_: None):
     return out
 
 
-def harvest_season(label: str, log=lambda *_: None) -> pd.DataFrame:
+def harvest_season(label: str, subtree: str = "Regular Season", suffix: str = "",
+                   log=lambda *_: None) -> pd.DataFrame:
     """Per-player season profile (per-game core + advanced stats + tier) for one
-    season, derived entirely from the official ballchasing tree. Writes
-    data/history/<label>.csv. Used to build the comparables pool."""
+    season's subtree ("Regular Season" = official, "Pre-season" = placements/
+    scrims), derived from the official ballchasing tree. Writes
+    data/history/<label><suffix>.csv. Used to build the comparables pool."""
     from collections import Counter
     bc = Ballchasing()
-    reg_id = SEASON_REG[label]
-    deeper = _child(bc, reg_id, "Regular Season")   # descend if given a season root
-    if deeper:
-        reg_id = deeper
+    root = SEASON_REG[label]
+    reg_id = _child(bc, root, subtree)              # the requested subtree
+    if not reg_id:
+        log(f"{label}: no '{subtree}' subtree, skipping")
+        return pd.DataFrame()
     leaves = _tier_leaves(bc, reg_id, log)
     log(f"{label}: {len(leaves)} match groups")
     acc = defaultdict(lambda: {"games": 0, "name": None, "sid": "",
@@ -131,7 +134,7 @@ def harvest_season(label: str, log=lambda *_: None) -> pd.DataFrame:
         rows.append(row)
     df = pd.DataFrame(rows)
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(HISTORY_DIR / f"{label}.csv", index=False)
+    df.to_csv(HISTORY_DIR / f"{label}{suffix}.csv", index=False)
     return df
 
 

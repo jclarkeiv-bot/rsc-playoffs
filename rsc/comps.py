@@ -31,7 +31,9 @@ def available() -> bool:
 
 def load_pool(min_games: int = MIN_GAMES) -> pd.DataFrame:
     if "pool" not in _cache:
-        frames = [pd.read_csv(f) for f in sorted(HIST.glob("*.csv"))]
+        # base pool = regular-season files only ("_pre"/other suffixes excluded)
+        files = [f for f in sorted(HIST.glob("*.csv")) if "_" not in f.stem]
+        frames = [pd.read_csv(f) for f in files]
         pool = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         if not pool.empty:                       # normalize tier names ("1Premier" -> "Premier")
             pool["tier"] = pool["tier"].astype(str).str.replace(r"^\s*\d+\s*", "", regex=True)
@@ -230,6 +232,112 @@ def career_rates(name: str) -> dict:
             rates[proj_col] = float((past[hist_col] * g).sum() / g.sum())
     return {"rates": rates, "games": int(g.sum()),
             "seasons": int(past["season"].nunique())}
+
+
+ALIAS_FILE = Path(__file__).resolve().parent.parent / "data" / "alias_overrides.json"
+
+
+def _alias_overrides() -> dict:
+    """Manual same-person merges the platform id can't catch (new accounts, etc).
+    JSON: {"<alias id-or-name>": "<canonical id-or-name>", ...}."""
+    if "aliases" not in _cache:
+        import json
+        try:
+            _cache["aliases"] = json.loads(ALIAS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            _cache["aliases"] = {}
+    return _cache["aliases"]
+
+
+def _pool_with_cid() -> pd.DataFrame:
+    """History pool with a career id (cid) per row: the steam/platform id when
+    present, else the lowercased name, then remapped through alias overrides."""
+    if "cidpool" not in _cache:
+        pool = load_pool(min_games=1).copy()
+        if not pool.empty:
+            sid = (pool["sid"].astype(str) if "sid" in pool.columns
+                   else pd.Series([""] * len(pool), index=pool.index))
+            name = pool["Player"].astype(str).str.lower()
+            cid = sid.where(sid.str.len() > 2, name)
+            ov = _alias_overrides()
+            pool["cid"] = cid.map(lambda c: ov.get(c, c))
+            pool["pct"] = pool.groupby("season")["score"].rank(pct=True) * 100
+        _cache["cidpool"] = pool
+    return _cache["cidpool"]
+
+
+def _alias_rows(grp: pd.DataFrame) -> list[dict]:
+    out = []
+    for nm, g in grp.groupby("Player"):
+        gm = g["games"].astype(float)
+        out.append({
+            "name": nm, "games": int(gm.sum()),
+            "seasons": int(g["season"].nunique()),
+            "goals": round(float((g["goals"] * gm).sum() / gm.sum()), 2),
+            "saves": round(float((g["saves"] * gm).sum() / gm.sum()), 2),
+            "last_season": sorted(g["season"], key=_season_key)[-1],
+        })
+    out.sort(key=lambda a: -a["games"])
+    return out
+
+
+def _season_key(s: str) -> int:
+    return int(s[1:]) if str(s)[1:].isdigit() else 0
+
+
+def career_for(cid: str) -> dict | None:
+    """Full career detail for one person (grouped across all their RL names)."""
+    pool = _pool_with_cid()
+    if pool.empty:
+        return None
+    grp = pool[pool["cid"].astype(str) == str(cid)]
+    if grp.empty:
+        return None
+    aliases = _alias_rows(grp)
+    seasons = sorted(grp["season"].unique(), key=_season_key)
+    tiers = grp.groupby("tier")["games"].sum().sort_values(ascending=False)
+    return {
+        "cid": str(cid), "primary": aliases[0]["name"], "rating": round(float(grp["pct"].mean())),
+        "aliases": aliases, "n_names": len(aliases),
+        "seasons": seasons, "n_seasons": len(seasons),
+        "tiers": [(t, int(v)) for t, v in tiers.items()],
+        "total_games": int(grp["games"].sum()),
+        "has_id": bool(str(cid).isdigit()),
+    }
+
+
+def career_cid_for_name(name: str) -> str | None:
+    """The career id a given RL name belongs to (most-played, if ambiguous)."""
+    pool = _pool_with_cid()
+    if pool.empty:
+        return None
+    r = pool[pool["Player"].astype(str).str.lower() == name.lower()]
+    if r.empty:
+        return None
+    return str(r.groupby("cid")["games"].sum().idxmax())
+
+
+def multi_name_careers(limit: int = 300) -> list[dict]:
+    """Careers that span more than one RL name - the interesting groupings."""
+    pool = _pool_with_cid()
+    if pool.empty:
+        return []
+    g = pool.groupby("cid").agg(names=("Player", "nunique"),
+                                games=("games", "sum"),
+                                seasons=("season", "nunique"))
+    g = g[g["names"] > 1].sort_values(["names", "games"], ascending=False).head(limit)
+    out = []
+    for cid, row in g.iterrows():
+        sub = pool[pool["cid"] == cid]
+        order = sub.groupby("Player")["games"].sum().sort_values(ascending=False)
+        out.append({
+            "cid": str(cid), "primary": order.index[0],
+            "names": order.index.tolist(), "n_names": int(row["names"]),
+            "rating": round(float(sub["pct"].mean())),
+            "seasons": int(row["seasons"]), "games": int(row["games"]),
+            "has_id": str(cid).isdigit(),
+        })
+    return out
 
 
 def player_history(name: str) -> list[dict]:

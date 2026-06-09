@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ c.primary }} - career{% endblock %}
+{% block body %}
+<p class="mb-1"><a href="{{ url_for('careers') }}" class="text-secondary small">&larr; all careers</a></p>
+<h1 class="h3">{{ c.primary }} <small class="text-secondary">career</small></h1>
+<p class="text-secondary small">
+  All Rocket League names linked to this account
+  {% if c.has_id %}(matched by platform id){% else %}(grouped by name - no platform id){% endif %}.
+</p>
+
+<div class="row g-3 mb-4">
+  <div class="col-auto"><div class="card"><div class="card-body text-center" style="min-width:8rem">
+    <div class="text-secondary small">Career rating</div><div class="display-6 mono">{{ c.rating }}</div>
+    <div class="text-secondary small">production %ile</div>
+  </div></div></div>
+  <div class="col-auto"><div class="card"><div class="card-body text-center" style="min-width:7rem">
+    <div class="text-secondary small">Names</div><div class="display-6 mono">{{ c.n_names }}</div>
+  </div></div></div>
+  <div class="col-auto"><div class="card"><div class="card-body text-center" style="min-width:9rem">
+    <div class="text-secondary small">Seasons</div><div class="display-6 mono">{{ c.n_seasons }}</div>
+    <div class="text-secondary small">{{ c.seasons|join(', ') }}</div>
+  </div></div></div>
+  <div class="col-auto"><div class="card"><div class="card-body text-center" style="min-width:7rem">
+    <div class="text-secondary small">Total games</div><div class="display-6 mono">{{ c.total_games }}</div>
+  </div></div></div>
+</div>
+
+<h2 class="h5">Rocket League names</h2>
+<table class="table table-hover table-sm mono" style="max-width:720px;">
+  <thead><tr><th>Name</th><th>Games</th><th>Seasons</th><th>Goals/g</th><th>Saves/g</th><th>Last seen</th></tr></thead>
+  <tbody>
+  {% for a in c.aliases %}
+    <tr>
+      <td><a href="{{ url_for('player', name=a.name) }}" class="fw-semibold">{{ a.name }}</a></td>
+      <td>{{ a.games }}</td><td>{{ a.seasons }}</td>
+      <td>{{ a.goals }}</td><td>{{ a.saves }}</td><td>{{ a.last_season }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2 class="h5 mt-4">Tiers played</h2>
+<p class="mono">{% for t, g in c.tiers %}{{ t }} <span class="text-secondary">({{ g }})</span>{% if not loop.last %} &middot; {% endif %}{% endfor %}</p>
+{% endblock %}

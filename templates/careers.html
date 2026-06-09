@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Careers{% endblock %}
+{% block body %}
+<h1 class="h3">Player careers <small class="text-secondary">(grouped by account)</small></h1>
+<p class="text-secondary small">
+  Players who have competed under more than one Rocket League name, grouped by their ballchasing account id -
+  <strong>{{ careers|length }}</strong> found. Career rating = the average of their per-season production
+  percentile (0&ndash;100) across every name and season. A <span class="text-secondary">~</span> marks accounts
+  grouped by name only (no platform id). Genuinely separate accounts can be hand-linked in
+  <code>data/alias_overrides.json</code>.
+</p>
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>Player</th><th>Also known as</th><th>Names</th><th>Seasons</th><th>Games</th>
+    <th title="Career production percentile across all names and seasons.">Career rating</th>
+  </tr></thead>
+  <tbody>
+  {% for c in careers %}
+    <tr>
+      <td><a href="{{ url_for('career', cid=c.cid) }}" class="fw-semibold">{{ c.primary }}</a>{% if not c.has_id %} <span class="text-secondary" title="No platform id - grouped by name only.">~</span>{% endif %}</td>
+      <td class="text-secondary small">{{ c.names[1:] | join(', ') }}</td>
+      <td>{{ c.n_names }}</td><td>{{ c.seasons }}</td><td>{{ c.games }}</td>
+      <td class="fw-semibold">{{ c.rating }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -13,6 +13,12 @@
       <a href="{{ url_for('team', tier=prof.tier, team=prof.team) }}">{{ prof.team }}</a>
       - {{ prof.w }}-{{ prof.l }} ({{ '%.3f'|format(prof.wp) }})
     </div>
+    {% if career_cid %}
+    <div class="small mt-1">
+      <a href="{{ url_for('career', cid=career_cid) }}">&#128100; Career</a>
+      {% if career and career.n_names > 1 %}<span class="text-secondary"> - also played as {{ career.aliases | rejectattr('name', 'equalto', prof.name) | map(attribute='name') | join(', ') }}</span>{% endif %}
+    </div>
+    {% endif %}
   </div>
   <div class="text-end">
     {% if rat %}
