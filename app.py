@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 
 from rsc import playoffs as P
 from rsc import profiles
@@ -27,6 +27,46 @@ from rsc.engine.simulate import playoff_curve
 from rsc.engine.compare import compare_players, compare_teams
 
 app = Flask(__name__)
+app.secret_key = "rsc-playoffs-data-scope"   # only signs the data-scope cookie
+
+# --- global data-scope filter (persisted in a cookie) ----------------------
+SCOPE_DEFAULTS = {"play": "official", "smode": "all", "n": "3", "sone": "S26"}
+
+
+@app.before_request
+def _apply_scope():
+    sc = dict(SCOPE_DEFAULTS)
+    sc.update(session.get("scope", {}))
+    for k in ("play", "smode", "n", "sone"):     # filter form submits these
+        v = request.args.get(k)
+        if v is not None:
+            sc[k] = v
+    session["scope"] = sc
+    try:
+        all_s = comps.seasons() if comps.available() else []
+    except Exception:
+        all_s = []
+    seasons = None                               # all
+    if sc["smode"] == "single":
+        seasons = [sc.get("sone", SEASON_LABEL)]
+    elif sc["smode"] == "lastN":
+        try:
+            seasons = all_s[: max(1, int(sc.get("n", 3)))]
+        except ValueError:
+            seasons = all_s[:3]
+    comps.set_scope(sc["play"], seasons)
+
+
+@app.context_processor
+def inject_scope():
+    sc = dict(SCOPE_DEFAULTS)
+    sc.update(session.get("scope", {}))
+    try:
+        all_s = comps.seasons() if comps.available() else []
+    except Exception:
+        all_s = []
+    return {"scope": sc, "scope_seasons": all_s}
+
 
 SEASON_LABEL = "S26"
 LIVE_DATA = True            # pull standings/schedule live from rscna.com
@@ -245,6 +285,12 @@ def player(name):
                            history=history, comp=comp, fc=fc,
                            career_cid=career_cid, career=career,
                            tiers=season().tiers, label=SEASON_LABEL)
+
+
+@app.route("/scope")
+def set_data_scope():
+    # the scope is read + persisted in before_request; just return to the page
+    return redirect(request.referrer or url_for("index"))
 
 
 @app.route("/careers")

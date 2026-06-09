@@ -12,12 +12,26 @@ and player names can change between seasons (so some history won't link).
 """
 from __future__ import annotations
 
+from contextvars import ContextVar
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 HIST = Path(__file__).resolve().parent.parent / "data" / "history"
+
+# request-scoped data filter: (play, seasons) where play is "official"|"all" and
+# seasons is None (all) or a tuple of season labels. Set per-request from app.
+_scope: ContextVar = ContextVar("scope", default=("official", None))
+
+
+def set_scope(play: str = "official", seasons=None) -> None:
+    play = play if play in ("official", "all") else "official"
+    _scope.set((play, tuple(seasons) if seasons else None))
+
+
+def get_scope():
+    return _scope.get()
 # per-game features that characterise a player's production + style
 FEATURES = ["goals", "assists", "saves", "shots", "boost_per_min", "avg_speed",
             "pct_supersonic", "pct_offensive_third", "demos_inflicted"]
@@ -29,16 +43,61 @@ def available() -> bool:
     return HIST.exists() and any(HIST.glob("*.csv"))
 
 
-def load_pool(min_games: int = MIN_GAMES) -> pd.DataFrame:
-    if "pool" not in _cache:
-        # base pool = regular-season files only ("_pre"/other suffixes excluded)
-        files = [f for f in sorted(HIST.glob("*.csv")) if "_" not in f.stem]
-        frames = [pd.read_csv(f) for f in files]
-        pool = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-        if not pool.empty:                       # normalize tier names ("1Premier" -> "Premier")
-            pool["tier"] = pool["tier"].astype(str).str.replace(r"^\s*\d+\s*", "", regex=True)
-        _cache["pool"] = pool
-    pool = _cache["pool"]
+def _read(files) -> pd.DataFrame:
+    frames = [pd.read_csv(f) for f in files]
+    pool = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if not pool.empty:                           # normalize tier names ("1Premier" -> "Premier")
+        pool["tier"] = pool["tier"].astype(str).str.replace(r"^\s*\d+\s*", "", regex=True)
+    return pool
+
+
+def _merge_play(reg: pd.DataFrame, pre: pd.DataFrame) -> pd.DataFrame:
+    """Combine regular + pre-season rows per person-season: games-weighted rates,
+    summed games. Key by id (or name) + season."""
+    both = pd.concat([reg, pre], ignore_index=True)
+    sid = both["sid"].astype(str) if "sid" in both.columns else pd.Series([""] * len(both))
+    both["_k"] = (sid.where(sid.str.len() > 2, both["Player"].astype(str).str.lower())
+                  + "|" + both["season"].astype(str))
+    keep = {"Player", "sid", "season", "games", "tier", "_k"}
+    metrics = [c for c in both.columns if c not in keep]
+    rows = []
+    for _, g in both.groupby("_k"):
+        gm = g["games"].astype(float)
+        tot = gm.sum()
+        top = g.sort_values("games", ascending=False).iloc[0]
+        row = {"Player": top["Player"], "sid": top.get("sid", ""),
+               "season": top["season"], "games": int(tot), "tier": top["tier"]}
+        for c in metrics:
+            row[c] = float((g[c] * gm).sum() / tot) if tot else None
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _build_pool(play: str, seasons) -> pd.DataFrame:
+    reg = _read([f for f in sorted(HIST.glob("*.csv")) if "_" not in f.stem])
+    if reg.empty:
+        return reg
+    if play == "all":
+        pre = _read(sorted(HIST.glob("*_pre.csv")))
+        if not pre.empty:
+            reg = _merge_play(reg, pre)
+    if seasons:
+        reg = reg[reg["season"].isin(seasons)]
+    return reg
+
+
+def load_pool(min_games: int = MIN_GAMES, play: str | None = None,
+              seasons="__scope__") -> pd.DataFrame:
+    """History pool under the active data scope. play/seasons override the
+    request scope (used by identity/career-prior code that must stay full)."""
+    sp_play, sp_seasons = _scope.get()
+    play = sp_play if play is None else play
+    seasons = sp_seasons if seasons == "__scope__" else (tuple(seasons) if seasons else None)
+    key = (play, seasons)
+    pools = _cache.setdefault("pools", {})
+    if key not in pools:
+        pools[key] = _build_pool(play, seasons)
+    pool = pools[key]
     return pool[pool["games"] >= min_games].copy() if not pool.empty else pool
 
 
@@ -54,7 +113,7 @@ def _name_to_sid() -> dict:
     """Current-season display name (lower) -> steam id, for linking a current
     player to their (steam-id-keyed) history across seasons."""
     if "n2s" not in _cache:
-        pool = load_pool(min_games=1)
+        pool = load_pool(min_games=1, play="official", seasons=None)
         if pool.empty or not _has_sid(pool):
             _cache["n2s"] = {}
         else:
@@ -98,7 +157,7 @@ SEASON_STAT_OPTS = {"goals": "Goals/g", "assists": "Assists/g",
 
 
 def seasons() -> list[str]:
-    pool = load_pool(min_games=1)
+    pool = load_pool(min_games=1, play="official", seasons=None)   # full list, scope-independent
     if pool.empty:
         return []
     return sorted(pool["season"].unique(),
@@ -195,7 +254,7 @@ def historical_skill() -> dict:
     """Career production level per player, 0-100, from COMPLETED past seasons:
     the average of their per-game 'score' percentile within each past season.
     Used as a prior so returning players aren't rated from scratch each season."""
-    pool = load_pool(min_games=8)
+    pool = load_pool(min_games=8, play="official", seasons=None)
     if pool.empty or "score" not in pool:
         return {}
     past = pool[pool["season"] != CURRENT_SEASON].copy()
@@ -219,7 +278,7 @@ _HIST_TO_PROJ = {"goals": "G", "assists": "A", "saves": "S",
 def career_rates(name: str) -> dict:
     """A player's games-weighted per-game rates across COMPLETED past seasons,
     keyed by projection stat (G/A/S/SH/DM). Empty if they have no history."""
-    pool = load_pool(min_games=8)
+    pool = load_pool(min_games=8, play="official", seasons=None)
     if pool.empty:
         return {}
     past = _rows_for(pool, name, past_only=True)
@@ -253,7 +312,7 @@ def _pool_with_cid() -> pd.DataFrame:
     """History pool with a career id (cid) per row: the steam/platform id when
     present, else the lowercased name, then remapped through alias overrides."""
     if "cidpool" not in _cache:
-        pool = load_pool(min_games=1).copy()
+        pool = load_pool(min_games=1, play="official", seasons=None).copy()
         if not pool.empty:
             sid = (pool["sid"].astype(str) if "sid" in pool.columns
                    else pd.Series([""] * len(pool), index=pool.index))

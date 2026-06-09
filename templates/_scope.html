@@ -1,0 +1,39 @@
+{% macro scope_bar() %}
+<form method="get" action="{{ url_for('set_data_scope') }}" class="card card-body py-2 mb-3 bg-body-tertiary">
+  <div class="row g-2 align-items-end">
+    <div class="col-auto">
+      <label class="form-label small mb-0" title="Official = regular-season matches. All RSC = also includes pre-season / placements / scrims.">RSC play</label>
+      <select name="play" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="official" {{ 'selected' if scope.play=='official' }}>Official matches only</option>
+        <option value="all" {{ 'selected' if scope.play=='all' }}>All RSC play (+ pre-season)</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">Seasons</label>
+      <select name="smode" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="all" {{ 'selected' if scope.smode=='all' }}>All seasons</option>
+        <option value="lastN" {{ 'selected' if scope.smode=='lastN' }}>Last N seasons</option>
+        <option value="single" {{ 'selected' if scope.smode=='single' }}>Single season</option>
+      </select>
+    </div>
+    {% if scope.smode=='lastN' %}
+    <div class="col-auto">
+      <label class="form-label small mb-0">N</label>
+      <input type="number" name="n" value="{{ scope.n }}" min="1" max="14" class="form-control form-control-sm" style="width:5rem">
+    </div>
+    {% endif %}
+    {% if scope.smode=='single' %}
+    <div class="col-auto">
+      <label class="form-label small mb-0">Season</label>
+      <select name="sone" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for sv in scope_seasons %}<option value="{{ sv }}" {{ 'selected' if sv==scope.sone }}>{{ sv }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="col-auto"><button class="btn btn-sm btn-primary">Apply</button></div>
+    <div class="col-auto text-secondary small" style="max-width:22rem">
+      Data scope &mdash; applies to comparables, the comparable forecast, tier balance &amp; historical leaderboards.
+    </div>
+  </div>
+</form>
+{% endmacro %}
