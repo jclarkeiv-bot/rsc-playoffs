@@ -1,25 +1,23 @@
 {% extends "base.html" %}
-{% from "_scope.html" import scope_bar with context %}
 {% block title %}Rankings{% endblock %}
 {% block body %}
 <h1 class="h3">Player Rankings</h1>
-{{ scope_bar() }}
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label class="form-label small">Season</label>
+    <label class="form-label small" title="Which season's leaderboard to show. 'current' is live this season; past seasons come from harvested replay history.">Season &#9432;</label>
     <select name="season" class="form-select" onchange="this.form.submit()">
       {% for sv in seasons %}<option value="{{ sv }}" {{ 'selected' if sv==sel_season }}>{{ sv }}{{ ' (current)' if sv==label }}</option>{% endfor %}
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label small">Tier</label>
+    <label class="form-label small" title="Limit the leaderboard to a single tier, or show all tiers together.">Tier</label>
     <select name="tier" class="form-select" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
       {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label small">Stat</label>
+    <label class="form-label small" title="Which statistic to rank players by.">Stat</label>
     <select name="stat" class="form-select" onchange="this.form.submit()">
       {% for key, meta in stat_opts.items() %}
         <option value="{{ key }}" {{ 'selected' if key==stat }}>{{ meta[0] }}</option>
@@ -28,10 +26,18 @@
   </div>
   {% if not historical %}
   <div class="col-auto">
-    <label class="form-label small">Mode</label>
+    <label class="form-label small" title="Per game = stat divided by games played. Total = season total.">Mode</label>
     <select name="mode" class="form-select" onchange="this.form.submit()">
       <option value="pg" {{ 'selected' if per_game }}>Per game</option>
       <option value="total" {{ 'selected' if not per_game }}>Total</option>
+    </select>
+  </div>
+  {% else %}
+  <div class="col-auto">
+    <label class="form-label small" title="Official = regular-season matches only. All RSC also includes pre-season / placements / scrims. Only affects past seasons (the live season is regular-season only).">RSC play &#9432;</label>
+    <select name="play" class="form-select" onchange="this.form.submit()">
+      <option value="official" {{ 'selected' if scope.play=='official' }}>Official only</option>
+      <option value="all" {{ 'selected' if scope.play=='all' }}>All RSC play</option>
     </select>
   </div>
   {% endif %}
