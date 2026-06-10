@@ -74,12 +74,12 @@
           <li>
             <form method="get" action="{{ url_for('set_data_scope') }}">
               <label class="form-label small mb-0" title="Official = regular-season games only. All RSC also folds in pre-season / placements / scrims (where it exists).">RSC play</label>
-              <select name="play" class="form-select form-select-sm mb-2">
+              <select name="play" class="form-select form-select-sm mb-2" onchange="this.form.submit()">
                 <option value="official" {{ 'selected' if scope.play=='official' }}>Official matches only</option>
                 <option value="all" {{ 'selected' if scope.play=='all' }}>All RSC play (+ pre-season)</option>
               </select>
               <label class="form-label small mb-0" title="How many seasons of history feed the analysis.">Seasons</label>
-              <select name="smode" class="form-select form-select-sm mb-2">
+              <select name="smode" class="form-select form-select-sm mb-2" onchange="this.form.submit()">
                 <option value="all" {{ 'selected' if scope.smode=='all' }}>All seasons</option>
                 <option value="lastN" {{ 'selected' if scope.smode=='lastN' }}>Last N seasons</option>
                 <option value="single" {{ 'selected' if scope.smode=='single' }}>Single season</option>
@@ -87,11 +87,11 @@
               <div class="row g-1 mb-2">
                 <div class="col">
                   <label class="form-label small mb-0" title="Used when 'Last N seasons' is selected.">N</label>
-                  <input type="number" name="n" value="{{ scope.n }}" min="1" max="14" class="form-control form-control-sm">
+                  <input type="number" name="n" value="{{ scope.n }}" min="1" max="14" class="form-control form-control-sm" onchange="this.form.submit()">
                 </div>
                 <div class="col">
                   <label class="form-label small mb-0" title="Used when 'Single season' is selected.">Season</label>
-                  <select name="sone" class="form-select form-select-sm">
+                  <select name="sone" class="form-select form-select-sm" onchange="this.form.submit()">
                     {% for sv in scope_seasons %}<option value="{{ sv }}" {{ 'selected' if sv==scope.sone }}>{{ sv }}</option>{% endfor %}
                   </select>
                 </div>
