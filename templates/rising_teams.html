@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Rising Stars - Teams{% endblock %}
+{% block body %}
+<h1 class="h3">Rising stars <small class="text-secondary">- teams</small></h1>
+<p class="text-secondary small">
+  Teams improving fastest <strong>this season</strong>. Momentum = a team's <strong>game-win% in the recent
+  half of its schedule minus its early half</strong> (split at the midpoint match day). Positive means they're
+  surging late; negative means cooling off. Because rosters and team names change between seasons, team momentum
+  is measured within the current season only.
+</p>
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>#</th><th>Team</th><th>Tier</th><th>Record</th>
+    <th title="Game-win% over the first half of the schedule.">Early</th>
+    <th title="Game-win% over the recent half of the schedule.">Recent</th>
+    <th title="Recent minus early game-win% - the momentum.">Momentum</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><a href="{{ url_for('team', tier=r.tier, team=r.team) }}" class="fw-semibold">{{ r.team }}</a></td>
+      <td><a href="{{ url_for('tier', tier=r.tier) }}">{{ r.tier }}</a></td>
+      <td>{{ r.record }}</td>
+      <td class="text-secondary">{{ r.early }}%</td>
+      <td>{{ r.recent }}%</td>
+      <td class="fw-semibold {{ 'text-success' if r.delta > 0 else 'text-danger' if r.delta < 0 else '' }}">{{ '%+d'|format(r.delta) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

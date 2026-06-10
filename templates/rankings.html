@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% from "_scope.html" import scope_bar with context %}
 {% block title %}Rankings{% endblock %}
 {% block body %}
 <h1 class="h3">Player Rankings</h1>
+{{ scope_bar() }}
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
     <label class="form-label small">Season</label>

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Rising Stars - Players{% endblock %}
+{% block body %}
+<h1 class="h3">Rising stars <small class="text-secondary">- players</small></h1>
+<p class="text-secondary small">
+  Players improving fastest <strong>over time</strong>, across seasons. The trend is the slope of their
+  per-season production percentile (0&ndash;100, ranked within each season) &mdash; <strong>percentile points
+  gained per season</strong>. Linked across name changes by account id, and limited to players active in the
+  last two seasons. Uses the full official dataset (a trajectory needs every season).
+</p>
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>#</th><th>Player</th><th>Current tier</th><th>Seasons</th>
+    <th title="Percentile points gained per season - the improvement rate.">Trend / szn</th>
+    <th title="Production percentile, first season -> latest.">First &rarr; latest</th>
+    <th>Trajectory</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td><a href="{{ url_for('player', name=r.primary) }}" class="fw-semibold">{{ r.primary }}</a>
+        <a href="{{ url_for('career', cid=r.cid) }}" class="text-secondary small" title="Career / all names">&#128100;</a></td>
+      <td>{{ r.tier }}</td>
+      <td>{{ r.n_seasons }}</td>
+      <td class="fw-semibold text-success">+{{ r.slope }}</td>
+      <td>{{ r.first }} &rarr; {{ r.latest }}</td>
+      <td class="text-secondary small">{% for s, p in zip(r.seasons, r.pcts) %}{{ s }}:{{ p }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="text-secondary small">A 2-season player with a big jump (e.g. 14 &rarr; 93) scores a steep trend - a breakout; more seasons make the slope a steadier, sustained climb. The trajectory column shows the percentile each season.</p>
+{% endblock %}

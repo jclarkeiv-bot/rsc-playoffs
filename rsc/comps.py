@@ -399,6 +399,47 @@ def multi_name_careers(limit: int = 300) -> list[dict]:
     return out
 
 
+def rising_players(limit: int = 50, min_seasons: int = 2) -> list[dict]:
+    """Players improving fastest over time: the slope of their per-season
+    production percentile across seasons (percentile points gained per season).
+    Linked by account id, restricted to players active in the last two seasons.
+    Always uses the full official dataset (a trajectory needs all seasons)."""
+    pool = load_pool(min_games=8, play="official", seasons=None)
+    if pool.empty or "score" not in pool.columns:
+        return []
+    pool = pool.copy()
+    pool["pct"] = pool.groupby("season")["score"].rank(pct=True) * 100
+    sid = (pool["sid"].astype(str) if "sid" in pool.columns
+           else pd.Series([""] * len(pool), index=pool.index))
+    cid = sid.where(sid.str.len() > 2, pool["Player"].astype(str).str.lower())
+    ov = _alias_overrides()
+    pool["cid"] = cid.map(lambda c: ov.get(c, c))
+    recent = _season_key(CURRENT_SEASON) - 1          # active in current or prior season
+    out = []
+    for cid, g in pool.groupby("cid"):
+        if g["season"].nunique() < min_seasons:
+            continue
+        g = g.assign(_k=g["season"].map(_season_key)).sort_values("_k")
+        if g["_k"].max() < recent:
+            continue
+        x = g["_k"].to_numpy(dtype=float)
+        y = g["pct"].to_numpy(dtype=float)
+        slope = float(np.polyfit(x, y, 1)[0]) if len(set(x)) > 1 else 0.0
+        if slope <= 0:
+            continue
+        order = g.sort_values("games", ascending=False)
+        out.append({
+            "cid": str(cid), "primary": order["Player"].iloc[0],
+            "n_seasons": int(g["season"].nunique()),
+            "slope": round(slope, 1),
+            "first": round(float(y[0])), "latest": round(float(y[-1])),
+            "seasons": list(g["season"]), "pcts": [round(float(v)) for v in y],
+            "tier": order["tier"].iloc[0], "games": int(g["games"].sum()),
+        })
+    out.sort(key=lambda o: -o["slope"])
+    return out[:limit]
+
+
 def player_history(name: str) -> list[dict]:
     """A player's per-season lines (any games), oldest first."""
     pool = load_pool(min_games=1)

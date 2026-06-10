@@ -78,6 +78,42 @@ def model_confidence(season: Season) -> dict:
     return confidence(backtest(season.matches))
 
 
+def team_momentum(season: Season, limit: int = 50, min_games: int = 8) -> list[dict]:
+    """Teams improving fastest this season: recent game-win% minus early-season
+    game-win% (split at the midpoint match day). Positive = surging."""
+    import pandas as pd
+    m = season.matches
+    m = m[m["played"] & m["is_regular"]]
+    recs = []
+    for r in m.itertuples(index=False):
+        recs.append((r.tier, r.away, r.match_day, r.away_g, r.home_g))
+        recs.append((r.tier, r.home, r.match_day, r.home_g, r.away_g))
+    if not recs:
+        return []
+    df = pd.DataFrame(recs, columns=["tier", "team", "md", "gf", "ga"])
+    out = []
+    for (tier, team), g in df.groupby(["tier", "team"]):
+        tot = int((g["gf"] + g["ga"]).sum())
+        if tot < min_games:
+            continue
+        mds = sorted(g["md"].dropna().unique())
+        if len(mds) < 2:
+            continue
+        mid = mds[len(mds) // 2]
+        early, late = g[g["md"] < mid], g[g["md"] >= mid]
+        ew = early["gf"].sum() / max(1, (early["gf"] + early["ga"]).sum())
+        lw = late["gf"].sum() / max(1, (late["gf"] + late["ga"]).sum())
+        wins = int(g["gf"].sum())
+        out.append({
+            "tier": tier, "team": team,
+            "early": round(ew * 100), "recent": round(lw * 100),
+            "delta": round((lw - ew) * 100),
+            "record": f"{wins}-{tot - wins}", "games": tot,
+        })
+    out.sort(key=lambda o: -o["delta"])
+    return out[:limit]
+
+
 def team_career_priors(season: Season, scale: float = 4.0) -> dict:
     """Starting Elo per (tier, team) from each roster's career skill (past
     seasons). A legitimate pre-season prior, used to test whether history

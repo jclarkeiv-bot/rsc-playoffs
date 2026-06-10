@@ -28,6 +28,7 @@ from rsc.engine.compare import compare_players, compare_teams
 
 app = Flask(__name__)
 app.secret_key = "rsc-playoffs-data-scope"   # only signs the data-scope cookie
+app.jinja_env.globals["zip"] = zip
 
 # --- global data-scope filter (persisted in a cookie) ----------------------
 SCOPE_DEFAULTS = {"play": "official", "smode": "all", "n": "3", "sone": "S26"}
@@ -284,6 +285,20 @@ def player(name):
                            ranks=ranks, rat=rat, adv=adv, role=role,
                            history=history, comp=comp, fc=fc,
                            career_cid=career_cid, career=career,
+                           tiers=season().tiers, label=SEASON_LABEL)
+
+
+@app.route("/rising-players")
+def rising_players():
+    rows = comps.rising_players(limit=60) if comps.available() else []
+    return render_template("rising_players.html", rows=rows,
+                           tiers=season().tiers, label=SEASON_LABEL)
+
+
+@app.route("/rising-teams")
+def rising_teams():
+    rows = P.team_momentum(season(), limit=60)
+    return render_template("rising_teams.html", rows=rows,
                            tiers=season().tiers, label=SEASON_LABEL)
 
 
