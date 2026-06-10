@@ -23,18 +23,30 @@ BASE = "https://ballchasing.com/api"
 ROOT = Path(__file__).resolve().parent.parent
 TOKEN_FILE = ROOT / ".ballchasing_token"
 CACHE_DIR = ROOT / "data" / "bc_cache"
-MIN_INTERVAL = 0.55      # seconds between live calls (regular tier ~2/s)
 CACHE_TTL = 30 * 24 * 3600   # match replays are immutable once uploaded
 TRAVERSE_TTL = 6 * 3600      # group listings refresh often to find new matches
 
+# seconds between live calls per patron tier (with a small safety margin)
+RATE_BY_TIER = {"regular": 0.55, "gold": 0.55, "diamond": 0.27,
+                "champion": 0.13, "gc": 0.07}
+
 _last_call = [0.0]
+_interval = [0.55]           # current min seconds between calls (set from tier)
+_tier = [None]               # detected patron tier, cached per process
 
 
 class Ballchasing:
-    def __init__(self, ttl: int = CACHE_TTL):
+    def __init__(self, ttl: int = CACHE_TTL, detect_tier: bool = True):
         self.token = TOKEN_FILE.read_text(encoding="utf-8").strip()
         self.ttl = ttl
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        if detect_tier and _tier[0] is None:
+            try:                                  # one cached ping -> set the rate
+                t = (self._get("/", ttl=3600).get("type") or "regular").lower()
+                _tier[0] = t
+                _interval[0] = RATE_BY_TIER.get(t, 0.55)
+            except Exception:
+                _tier[0] = "regular"
 
     def _cache_path(self, url: str) -> Path:
         return CACHE_DIR / (hashlib.sha1(url.encode()).hexdigest()[:18] + ".json")
@@ -48,7 +60,7 @@ class Ballchasing:
             return json.loads(cp.read_text(encoding="utf-8"))
         req = urllib.request.Request(url, headers={"Authorization": self.token})
         for attempt in range(6):
-            wait = MIN_INTERVAL - (time.time() - _last_call[0])
+            wait = _interval[0] - (time.time() - _last_call[0])
             if wait > 0:
                 time.sleep(wait)
             try:
