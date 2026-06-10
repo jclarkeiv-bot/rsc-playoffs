@@ -30,6 +30,17 @@ app = Flask(__name__)
 app.secret_key = "rsc-playoffs-data-scope"   # only signs the data-scope cookie
 app.jinja_env.globals["zip"] = zip
 
+
+@app.template_filter("ordinal")
+def _ordinal(n):
+    """1 -> 1st, 2 -> 2nd, 3 -> 3rd, 11 -> 11th, 22 -> 22nd, etc."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return n
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
 # --- global data-scope filter (persisted in a cookie) ----------------------
 SCOPE_DEFAULTS = {"play": "official", "smode": "all", "n": "3", "sone": "S26"}
 
@@ -290,15 +301,27 @@ def player(name):
 
 @app.route("/rising-players")
 def rising_players():
-    rows = comps.rising_players(limit=60) if comps.available() else []
-    return render_template("rising_players.html", rows=rows,
-                           tiers=season().tiers, label=SEASON_LABEL)
+    tier = request.args.get("tier", "all")
+    through = request.args.get("through", SEASON_LABEL)
+    min_seasons = request.args.get("min_seasons", 2, type=int) or 2
+    seasons_list = comps.seasons() if comps.available() else []
+    if through not in seasons_list:
+        through = SEASON_LABEL
+    rows = (comps.rising_players(limit=80, min_seasons=min_seasons, tier=tier,
+                                 through=through) if comps.available() else [])
+    return render_template("rising_players.html", rows=rows, tier=tier,
+                           through=through, min_seasons=min_seasons,
+                           rseasons=seasons_list, tiers=season().tiers,
+                           label=SEASON_LABEL)
 
 
 @app.route("/rising-teams")
 def rising_teams():
-    rows = P.team_momentum(season(), limit=60)
-    return render_template("rising_teams.html", rows=rows,
+    tier = request.args.get("tier", "all")
+    rows = P.team_momentum(season(), limit=300)
+    if tier != "all":
+        rows = [r for r in rows if r["tier"] == tier]
+    return render_template("rising_teams.html", rows=rows[:120], tier=tier,
                            tiers=season().tiers, label=SEASON_LABEL)
 
 

@@ -399,12 +399,14 @@ def multi_name_careers(limit: int = 300) -> list[dict]:
     return out
 
 
-def rising_players(limit: int = 50, min_seasons: int = 2) -> list[dict]:
+def rising_players(limit: int = 80, min_seasons: int = 2, tier: str = "all",
+                   through: str | None = None, min_games: int = 8) -> list[dict]:
     """Players improving fastest over time: the slope of their per-season
-    production percentile across seasons (percentile points gained per season).
-    Linked by account id, restricted to players active in the last two seasons.
-    Always uses the full official dataset (a trajectory needs all seasons)."""
-    pool = load_pool(min_games=8, play="official", seasons=None)
+    production percentile (percentile points gained per season). Linked by
+    account id. `through` analyses the trajectory AS OF that season (so it's
+    comparable across seasons - "who was rising as of S22"); `tier` filters by
+    the player's tier in that season; `min_seasons` favours sustained climbs."""
+    pool = load_pool(min_games=min_games, play="official", seasons=None)
     if pool.empty or "score" not in pool.columns:
         return []
     pool = pool.copy()
@@ -414,12 +416,15 @@ def rising_players(limit: int = 50, min_seasons: int = 2) -> list[dict]:
     cid = sid.where(sid.str.len() > 2, pool["Player"].astype(str).str.lower())
     ov = _alias_overrides()
     pool["cid"] = cid.map(lambda c: ov.get(c, c))
-    recent = _season_key(CURRENT_SEASON) - 1          # active in current or prior season
+    pool["_k"] = pool["season"].map(_season_key)
+    tkey = _season_key(through) if through else pool["_k"].max()
+    pool = pool[pool["_k"] <= tkey]                   # trajectory up to chosen season
+    recent = tkey - 1                                 # must be active in/near that season
     out = []
     for cid, g in pool.groupby("cid"):
         if g["season"].nunique() < min_seasons:
             continue
-        g = g.assign(_k=g["season"].map(_season_key)).sort_values("_k")
+        g = g.sort_values("_k")
         if g["_k"].max() < recent:
             continue
         x = g["_k"].to_numpy(dtype=float)
@@ -427,14 +432,16 @@ def rising_players(limit: int = 50, min_seasons: int = 2) -> list[dict]:
         slope = float(np.polyfit(x, y, 1)[0]) if len(set(x)) > 1 else 0.0
         if slope <= 0:
             continue
-        order = g.sort_values("games", ascending=False)
+        last = g.iloc[-1]                             # most recent (<= through) season
+        if tier != "all" and last["tier"] != tier:
+            continue
         out.append({
-            "cid": str(cid), "primary": order["Player"].iloc[0],
+            "cid": str(cid), "primary": last["Player"],
             "n_seasons": int(g["season"].nunique()),
             "slope": round(slope, 1),
             "first": round(float(y[0])), "latest": round(float(y[-1])),
             "seasons": list(g["season"]), "pcts": [round(float(v)) for v in y],
-            "tier": order["tier"].iloc[0], "games": int(g["games"].sum()),
+            "tier": last["tier"], "games": int(g["games"].sum()),
         })
     out.sort(key=lambda o: -o["slope"])
     return out[:limit]

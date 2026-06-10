@@ -27,7 +27,7 @@
       <td><a href="{{ url_for('team', tier=tier, team=r.Team) }}">{{ r.Team }}</a></td>
       <td>{{ r.GP }}</td>
       <td>{{ r.OVR|int }}</td>
-      <td>{{ '%+.1f'|format(r.tier_z) }} SD <span class="text-secondary">({{ r.tier_pct|int }}th)</span></td>
+      <td>{{ '%+.1f'|format(r.tier_z) }} SD <span class="text-secondary">({{ r.tier_pct|ordinal }})</span></td>
       <td><span class="badge {{ 'text-bg-warning' if dir_label=='up' else 'text-bg-info' }}">{{ '&uarr;'|safe if dir_label=='up' else '&darr;'|safe }} {{ r.projected_tier }}</span></td>
     </tr>
   {% endfor %}

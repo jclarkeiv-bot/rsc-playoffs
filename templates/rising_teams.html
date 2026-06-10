@@ -6,8 +6,19 @@
   Teams improving fastest <strong>this season</strong>. Momentum = a team's <strong>game-win% in the recent
   half of its schedule minus its early half</strong> (split at the midpoint match day). Positive means they're
   surging late; negative means cooling off. Because rosters and team names change between seasons, team momentum
-  is measured within the current season only.
+  is measured within the current season only - our data only has team rosters and the match schedule for
+  the live season, so (unlike players) teams can't be tracked across seasons.
 </p>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small mb-0">Tier</label>
+    <select name="tier" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-sm btn-primary">Go</button></div>
+</form>
 <table class="table table-hover table-sm mono">
   <thead><tr>
     <th>#</th><th>Team</th><th>Tier</th><th>Record</th>

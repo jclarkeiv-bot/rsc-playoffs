@@ -35,14 +35,14 @@
 {% if rat %}
 <div class="d-flex flex-wrap gap-2 mt-2">
   <span class="badge text-bg-primary" title="Overall Rating: league percentile (0-100) of cross-tier skill = within-tier dominance (per-game stats z-scored vs tier peers, weighted by what correlates with winning, small samples shrunk) PLUS a tier-strength bonus.">Overall rating {{ rat.ovr }}/100</span>
-  <span class="badge text-bg-secondary" title="Where this player ranks within their own tier on the composite, and how many SDs above the tier average they sit.">Tier dominance: {{ rat.tier_pct }}th ({{ '+%.1f'|format(rat.tier_z) if rat.tier_z >= 0 else '%.1f'|format(rat.tier_z) }} SD)</span>
+  <span class="badge text-bg-secondary" title="Where this player ranks within their own tier on the composite, and how many SDs above the tier average they sit.">Tier dominance: {{ rat.tier_pct|ordinal }} ({{ '+%.1f'|format(rat.tier_z) if rat.tier_z >= 0 else '%.1f'|format(rat.tier_z) }} SD)</span>
   <span class="badge text-bg-dark" title="The tier this player's cross-tier skill projects into if everyone were re-sorted by ability. A model estimate.">Projects as: {{ rat.projected_tier }}</span>
   {% if rat.overskilled %}
     <span class="badge text-bg-warning" title="A within-tier outlier whose skill projects a tier higher - genuinely too good for this tier, not merely top of it.{% if rat.career_confirmed %} Backed by a strong multi-season career.{% endif %}">&uarr; Overskilled for {{ rat.tier }}{% if rat.career_confirmed %} &check; career-proven{% endif %}</span>
   {% elif rat.underskilled %}
     <span class="badge text-bg-info" title="Skill projects a tier lower than their current tier.">&darr; Below tier level</span>
   {% endif %}
-  {% if role %}<span class="badge text-bg-dark" title="Dominant role from stat mix vs tier peers - goals {{ role.goals_pct }}th / assists {{ role.assists_pct }}th / saves {{ role.saves_pct }}th percentile.">Role: {{ role.role }}</span>{% endif %}
+  {% if role %}<span class="badge text-bg-dark" title="Dominant role from stat mix vs tier peers - goals {{ role.goals_pct|ordinal }} / assists {{ role.assists_pct|ordinal }} / saves {{ role.saves_pct|ordinal }} percentile.">Role: {{ role.role }}</span>{% endif %}
 </div>
 <details class="mt-2 small text-secondary" style="max-width:760px;">
   <summary style="cursor:pointer;">How are these calculated?</summary>
@@ -81,7 +81,7 @@
           <div class="flex-grow-1" style="background:#343a40;border-radius:3px;">
             <div style="height:16px;border-radius:3px;background:#4263eb;width:{{ s.pctile }}%;"></div>
           </div>
-          <span style="width:42px;text-align:right;">{{ s.pctile }}th</span>
+          <span style="width:42px;text-align:right;">{{ s.pctile|ordinal }}</span>
         </div>
         {% else %}-{% endif %}
       </td>

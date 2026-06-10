@@ -5,9 +5,30 @@
 <p class="text-secondary small">
   Players improving fastest <strong>over time</strong>, across seasons. The trend is the slope of their
   per-season production percentile (0&ndash;100, ranked within each season) &mdash; <strong>percentile points
-  gained per season</strong>. Linked across name changes by account id, and limited to players active in the
-  last two seasons. Uses the full official dataset (a trajectory needs every season).
+  gained per season</strong>. Linked across name changes by account id.
 </p>
+<form method="get" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label class="form-label small mb-0" title="Analyse each player's trajectory as it stood at the end of this season - lets you compare rising stars across seasons.">As of season</label>
+    <select name="through" class="form-select form-select-sm" onchange="this.form.submit()">
+      {% for sv in rseasons %}<option value="{{ sv }}" {{ 'selected' if sv==through }}>{{ sv }}{{ ' (now)' if sv==label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small mb-0">Tier (then)</label>
+    <select name="tier" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label small mb-0" title="Require at least this many seasons - raise it to favour sustained climbs over one-year breakouts.">Min seasons</label>
+    <select name="min_seasons" class="form-select form-select-sm" onchange="this.form.submit()">
+      {% for ms in [2,3,4,5] %}<option value="{{ ms }}" {{ 'selected' if ms==min_seasons }}>{{ ms }}+</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-sm btn-primary">Go</button></div>
+</form>
 <table class="table table-hover table-sm mono">
   <thead><tr>
     <th>#</th><th>Player</th><th>Current tier</th><th>Seasons</th>
