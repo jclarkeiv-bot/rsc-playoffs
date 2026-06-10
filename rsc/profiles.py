@@ -160,7 +160,9 @@ def team_totals(tier: str, team: str, df: pd.DataFrame | None = None) -> dict:
 
 # stats offerable on the leaderboard: key -> (label, can-be-per-game)
 LEADERBOARD_STATS = {
-    "OVR": ("Overall Rating", False),
+    "OVR": ("Overall Rating (cross-tier)", False),
+    "tier_pct": ("Within-tier percentile", False),
+    "tier_z": ("Within-tier dominance (SD)", False),
     "Pts": ("Points", True), "G": ("Goals", True), "A": ("Assists", True),
     "S": ("Saves", True), "SH": ("Shots", True), "DM": ("Demos", True),
     "MVP": ("MVPs", True), "SH%": ("Shot %", False), "W": ("Wins", False),

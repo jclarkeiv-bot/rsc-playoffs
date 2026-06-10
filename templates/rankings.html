@@ -51,6 +51,7 @@
 <p class="text-secondary small">
   {{ sel_season }}{{ ' (current)' if sel_season == label }} -
   top {{ rows|length }} by <strong>{{ stat_label }}</strong>{{ ' - ' ~ tier if tier != 'all' }}.
+  {% if stat in ['tier_pct','tier_z'] %}<br><strong>Within-tier</strong> ranks each player against their <em>own tier's</em> peers, so a dominant Amateur can top the list - unlike <strong>Overall Rating</strong>, which is cross-tier (higher tiers dominate). Pick a tier above to see that tier's internal order.{% elif stat == 'OVR' %}<br>Overall Rating is <strong>cross-tier</strong> - it accounts for tier strength, so top tiers rank highest. For standing <em>within</em> a tier, choose "Within-tier percentile".{% endif %}
   {% if historical %}<br>Past seasons come from harvested replay history (per-game stats; OVR is current-season only).{% endif %}
 </p>
 
@@ -71,6 +72,8 @@
       <td class="text-end">
         {% if stat == 'SH%' %}{{ '%.1f'|format(r.value*100) }}%
         {% elif stat == 'OVR' %}{{ r.value|int }}
+        {% elif stat == 'tier_pct' %}{{ r.value|ordinal }}
+        {% elif stat == 'tier_z' %}{{ '%+.2f'|format(r.value) }} SD
         {% elif historical or per_game %}{{ '%.2f'|format(r.value) }}
         {% else %}{{ r.value|int }}{% endif %}
       </td>
