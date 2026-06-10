@@ -22,8 +22,8 @@
   </div>
   <div class="text-end">
     {% if rat %}
-    <div class="display-6 mono" title="Overall Rating (0-100): league percentile of cross-tier skill.">{{ rat.ovr }}<span class="fs-6 text-secondary"> OVR</span></div>
-    <div class="text-secondary small" title="GP = Games Played. Each match day is a 4-game series and every game counts, so GP counts individual games, not match days.">overall rating (0-100) - {{ prof.gp }} games (GP)</div>
+    <div class="display-6 mono" title="Overall Rating: a 0-100 percentile of cross-tier skill - how good this player is vs every player in the league (100 = best, 50 = median).">{{ rat.ovr }}<span class="fs-6 text-secondary"> OVR</span></div>
+    <div class="text-secondary small">overall rating (0&ndash;100) &middot; {{ prof.gp }} games &middot; <a href="{{ url_for('about_ratings') }}" title="Plain-English explanation of how OVR is calculated.">how is this calculated?</a></div>
     {% else %}
     <div class="display-6 mono">{{ prof.pts }}</div>
     <div class="text-secondary small" title="GP = Games Played (individual games; each match day = 4 games).">total points - {{ prof.gp }} games (GP)</div>

@@ -307,6 +307,14 @@ def player(name):
                            tiers=season().tiers, label=SEASON_LABEL)
 
 
+@app.route("/about-ratings")
+def about_ratings():
+    imp = rating.stat_importance(profiles.players())
+    return render_template("about_ratings.html", importance=imp,
+                           tier_step=rating.TIER_STEP, shrink_k=rating.SHRINK_K,
+                           tiers=season().tiers, label=SEASON_LABEL)
+
+
 @app.route("/rising-players")
 def rising_players():
     tier = request.args.get("tier", "all")

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}How Ratings Work{% endblock %}
+{% block body %}
+<h1 class="h3">How the ratings work</h1>
+
+<h2 class="h5 mt-4">Overall Rating (OVR) <span class="badge text-bg-secondary">0&ndash;100</span></h2>
+<p>
+  <strong>OVR is a 0&ndash;100 score of how good a player is compared to <em>every</em> player in the league</strong>
+  &mdash; not just their own tier. <strong>100</strong> is the best in the league; <strong>50</strong> is the
+  league median. It's built in three steps:
+</p>
+<ol>
+  <li><strong>Within-tier dominance.</strong> We measure how far above (or below) their <em>tier's average</em> a
+    player sits on the stats that actually correlate with winning (weights below). Being far above your tier's
+    average scores high here.</li>
+  <li><strong>Tier-strength bonus.</strong> A dominant Amateur isn't the same as a dominant Premier player, so we
+    add a bonus for the difficulty of the tier &mdash; each tier up is worth about <strong>{{ tier_step }}</strong>
+    "dominance points." This is what lets us compare players <em>across</em> tiers.</li>
+  <li><strong>Small-sample safety.</strong> Players with few games are pulled toward average until they prove it
+    (worth about <strong>{{ shrink_k }}</strong> games of regression), so a short hot streak doesn't top the list.</li>
+</ol>
+<p>
+  We then rank everyone by that combined score and convert it to a <strong>0&ndash;100 percentile</strong> &mdash;
+  that's the OVR. Advanced ballchasing mechanics (boost, speed, positioning, demos) are folded into step 1 alongside
+  the box score, each weighted by how much it correlates with winning.
+</p>
+
+<h3 class="h6 mt-3">What drives it (this season's weights)</h3>
+<p class="text-secondary small">These are measured from this season's data &mdash; the correlation of each box-score stat with winning, normalized into a weight. Not hand-picked.</p>
+<table class="table table-sm mono" style="max-width:520px;">
+  <thead><tr><th>Stat</th><th title="Correlation with win rate (-1 to 1).">Corr. with winning</th><th title="Share of the box-score composite.">Weight</th></tr></thead>
+  <tbody>
+  {% for s in importance %}
+    <tr><td>{{ s.stat }}</td><td>{{ '%+.2f'|format(s.corr_with_winning) }}</td><td class="fw-semibold">{{ (s.weight*100)|round|int }}%</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="alert alert-secondary small">
+  <strong>What OVR is not:</strong> it isn't the game's official matchmaking rating (we don't have that), and there
+  are no cross-tier games to measure the exact gaps between tiers &mdash; so the tier bonus is a <em>model estimate</em>.
+  Treat OVR as a strong, data-driven estimate of overall skill, not an exact measurement.
+</div>
+
+<h2 class="h5 mt-4">Related ratings</h2>
+<dl class="row small">
+  <dt class="col-sm-3">Tier dominance</dt>
+  <dd class="col-sm-9">Just step 1 on its own &mdash; how many standard deviations above (or below) their tier average a player sits, with their percentile within the tier.</dd>
+  <dt class="col-sm-3">Projects to</dt>
+  <dd class="col-sm-9">The tier their cross-tier skill would sort them into if everyone were re-ranked by ability &mdash; the basis for "Tier Fit" (too good / over-placed).</dd>
+  <dt class="col-sm-3">Career rating</dt>
+  <dd class="col-sm-9">Their production percentile averaged across all past seasons (linked by account id) &mdash; a long-run version of the same idea.</dd>
+  <dt class="col-sm-3">Advanced OVR</dt>
+  <dd class="col-sm-9">A <em>separate</em> rating built only from ballchasing mechanics (boost/speed/positioning/demos), shown on player pages. It is <strong>not</strong> mixed into the box-score OVR &mdash; it's a second opinion.</dd>
+</dl>
+<p class="text-secondary small">See also the <a href="{{ url_for('stat_impact') }}">Stat Impact</a> and <a href="{{ url_for('accuracy') }}">Model Accuracy</a> pages.</p>
+{% endblock %}
