@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% from "_scope.html" import scope_bar with context %}
 {% block title %}Tier Balance{% endblock %}
 {% block body %}
-<h1 class="h3">Tier balance</h1>
-{{ scope_bar() }}
+<h1 class="h3">Tier balance <small class="text-secondary">- data: {{ scope_label }} (change in the nav)</small></h1>
 <p class="text-secondary">
   Are players sorted into the right tiers? We can't measure this perfectly - the league's
   real tool is matchmaking rating, which we don't have, and teams only play within their own

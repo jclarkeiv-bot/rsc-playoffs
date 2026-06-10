@@ -77,7 +77,15 @@ def inject_scope():
         all_s = comps.seasons() if comps.available() else []
     except Exception:
         all_s = []
-    return {"scope": sc, "scope_seasons": all_s}
+    play_lbl = "All RSC" if sc["play"] == "all" else "Official"
+    if sc["smode"] == "single":
+        szn = sc.get("sone", SEASON_LABEL)
+    elif sc["smode"] == "lastN":
+        szn = "Last " + str(sc.get("n", 3))
+    else:
+        szn = "All seasons"
+    return {"scope": sc, "scope_seasons": all_s,
+            "scope_label": f"{play_lbl} · {szn}"}
 
 
 SEASON_LABEL = "S26"
