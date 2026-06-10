@@ -11,7 +11,7 @@
 </p>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label class="form-label small mb-0">Tier</label>
+    <label class="form-label small mb-0" title="Filter the rising-teams list to a single tier.">Tier &#9432;</label>
     <select name="tier" class="form-select form-select-sm" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
       {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}

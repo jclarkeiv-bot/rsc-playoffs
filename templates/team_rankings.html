@@ -4,14 +4,14 @@
 <h1 class="h3">Team Rankings</h1>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label class="form-label small">Tier</label>
+    <label class="form-label small" title="Limit the team rankings to a single tier.">Tier &#9432;</label>
     <select name="tier" class="form-select" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
       {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label small">Rank by</label>
+    <label class="form-label small" title="Which team metric to sort by (e.g. game-win %, goal differential, roster skill).">Rank by &#9432;</label>
     <select name="metric" class="form-select" onchange="this.form.submit()">
       {% for k, meta in metric_opts.items() %}<option value="{{ k }}" {{ 'selected' if k==metric }}>{{ meta[0] }}</option>{% endfor %}
     </select>

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Tier Fit{% endblock %}
+{% block body %}
+<h1 class="h3">Tier fit <small class="text-secondary">- misplaced players</small></h1>
+<p class="text-secondary">
+  Players whose cross-tier skill doesn't match the tier they're in. Toggle between those who look
+  <strong>too good for their tier</strong> (should move up) and those who look <strong>placed too high</strong>
+  (struggling relative to their tier). "Tier dominance" = standard deviations from their tier's average;
+  "Projects to" = the tier their skill would sort them into.
+</p>
+<div class="btn-group mb-3" role="group">
+  <a href="{{ url_for('tier_fit', dir='up', tier=tier) }}" class="btn btn-sm {{ 'btn-primary' if direction=='up' else 'btn-outline-primary' }}">&uarr; Too good for their tier (move up)</a>
+  <a href="{{ url_for('tier_fit', dir='down', tier=tier) }}" class="btn btn-sm {{ 'btn-primary' if direction=='down' else 'btn-outline-primary' }}">&darr; Placed too high (over-placed)</a>
+</div>
+<div class="alert alert-secondary small py-2">
+  <strong>How this is estimated:</strong> cross-tier skill = within-tier dominance + a tier-strength bonus
+  (Premier counts most). It's a model estimate - there are no cross-tier games to measure the exact gaps -
+  so treat it as a strong signal, not gospel.
+</div>
+<form method="get" class="row g-2 align-items-end mb-3" style="max-width:340px;">
+  <input type="hidden" name="dir" value="{{ direction }}">
+  <div class="col-auto">
+    <label class="form-label small" title="Limit the list to a single tier.">Tier &#9432;</label>
+    <select name="tier" class="form-select" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if tier=='all' }}>All tiers</option>
+      {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary">Filter</button></div>
+</form>
+{% if not rows %}<div class="alert alert-secondary">No {{ 'over-placed' if direction=='down' else 'too-good' }} players in {{ tier }}.</div>{% endif %}
+<table class="table table-hover table-sm mono">
+  <thead><tr>
+    <th>Player</th><th>Tier</th><th>Team</th><th title="Games Played">Games</th>
+    <th title="Standard deviations from the player's tier average on the composite rating. Far above = too good for the tier; far below = over-placed.">Tier dominance &#9432;</th>
+    <th title="Overall Rating: league percentile of cross-tier skill (within-tier dominance + tier-strength bonus).">Overall rating &#9432;</th>
+    <th title="The tier this player's cross-tier skill would place them in if all players were re-sorted by ability.">Projects to &#9432;</th>
+    <th title="Whether multi-season career skill backs up the flag.">Career &#9432;</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{{ url_for('player', name=r.Player) }}" class="fw-semibold">{{ r.Player }}</a></td>
+      <td>{{ r.Tier }}</td>
+      <td><a href="{{ url_for('team', tier=r.Tier, team=r.Team) }}">{{ r.Team }}</a></td>
+      <td>{{ r.GP }}</td>
+      <td>{{ '%+.1f'|format(r.tier_z) }} SD <span class="text-secondary">({{ r.tier_pct|ordinal }})</span></td>
+      <td>{{ r.OVR|int }}</td>
+      <td><span class="badge {{ 'text-bg-warning' if direction=='down' else 'text-bg-info' }}">{{ '&darr;'|safe if direction=='down' else '&uarr;'|safe }} {{ r.projected_tier }}</span></td>
+      <td>
+        {% if direction=='up' %}
+          {% if r.career_confirmed %}<span class="badge text-bg-success" title="Strong multi-season track record - a proven promotion candidate.">&check; proven ({{ r.career_pct|ordinal }})</span>
+          {% elif r.career_pct is not none %}<span class="text-secondary">{{ r.career_pct|ordinal }} career</span>
+          {% else %}<span class="text-secondary">no history</span>{% endif %}
+        {% else %}
+          {% if r.career_pct is not none and r.career_pct < 40 %}<span class="badge text-bg-warning" title="A weak career too - looks genuinely over-placed, not just a slow start.">weak ({{ r.career_pct|ordinal }})</span>
+          {% elif r.career_pct is not none %}<span class="text-secondary" title="A solid career suggests this may be a slow start rather than a true mismatch.">{{ r.career_pct|ordinal }} career</span>
+          {% else %}<span class="text-secondary">no history</span>{% endif %}
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

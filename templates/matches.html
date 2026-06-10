@@ -4,20 +4,20 @@
 <h1 class="h3">Matches</h1>
 <form method="get" class="row g-2 align-items-end mb-3">
   <div class="col-auto">
-    <label class="form-label small">Tier</label>
+    <label class="form-label small" title="Which tier's match schedule to show.">Tier &#9432;</label>
     <select name="tier" class="form-select" onchange="this.form.submit()">
       {% for t in tiers %}<option value="{{ t }}" {{ 'selected' if t==tier }}>{{ t }}</option>{% endfor %}
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label small">Team</label>
+    <label class="form-label small" title="Filter to a single team's matches.">Team &#9432;</label>
     <select name="team" class="form-select" onchange="this.form.submit()">
       <option value="">All teams</option>
       {% for t in teams %}<option value="{{ t }}" {{ 'selected' if t==team }}>{{ t }}</option>{% endfor %}
     </select>
   </div>
   <div class="col-auto">
-    <label class="form-label small">Show</label>
+    <label class="form-label small" title="Show all matches, only those already played, or only upcoming ones.">Show &#9432;</label>
     <select name="show" class="form-select" onchange="this.form.submit()">
       <option value="all" {{ 'selected' if show=='all' }}>All</option>
       <option value="played" {{ 'selected' if show=='played' }}>Played</option>

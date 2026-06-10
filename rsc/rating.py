@@ -217,17 +217,27 @@ def tier_misplaced(players: pd.DataFrame, tier: str):
     return up, down
 
 
-def overskilled_candidates(players: pd.DataFrame, limit: int = 80) -> pd.DataFrame:
-    """Players who project ABOVE their current tier (and are within-tier
-    outliers) - genuinely too good for their tier, not just 'best in tier'."""
+_MISPLACED_COLS = ["Player", "Tier", "Team", "GP", "OVR", "tier_z", "tier_pct",
+                   "projected_tier", "tier_delta", "career_pct", "career_confirmed"]
+
+
+def misplaced_candidates(players: pd.DataFrame, direction: str = "up",
+                         limit: int = 80) -> pd.DataFrame:
+    """Players whose cross-tier skill doesn't match their tier.
+    direction='up'   -> too good for their tier (project a tier higher).
+    direction='down' -> placed too high (project a tier lower, struggling)."""
     r = compute_ratings(players)
-    r = r[r["overskilled"]]
-    # career-confirmed candidates first, then by how far they project up
-    r = r.sort_values(["career_confirmed", "tier_delta", "tier_z"],
-                      ascending=False).head(limit)
-    return r[["Player", "Tier", "Team", "GP", "OVR", "tier_z", "tier_pct",
-              "projected_tier", "tier_delta", "career_pct",
-              "career_confirmed"]].reset_index(drop=True)
+    if direction == "down":
+        r = r[r["underskilled"]].sort_values(["tier_delta", "tier_z"],
+                                             ascending=True)
+    else:
+        r = r[r["overskilled"]].sort_values(["career_confirmed", "tier_delta",
+                                             "tier_z"], ascending=False)
+    return r.head(limit)[_MISPLACED_COLS].reset_index(drop=True)
+
+
+def overskilled_candidates(players: pd.DataFrame, limit: int = 80) -> pd.DataFrame:
+    return misplaced_candidates(players, "up", limit)
 
 
 if __name__ == "__main__":

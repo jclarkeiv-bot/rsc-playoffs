@@ -349,12 +349,19 @@ def career(cid):
 
 @app.route("/overskilled")
 def overskilled():
+    return redirect(url_for("tier_fit", dir="up"))
+
+
+@app.route("/tier-fit")
+def tier_fit():
     tier = request.args.get("tier", "all")
-    cand = rating.overskilled_candidates(profiles.players(), limit=300)
+    direction = "down" if request.args.get("dir") == "down" else "up"
+    cand = rating.misplaced_candidates(profiles.players(), direction, limit=300)
     if tier and tier != "all":
         cand = cand[cand["Tier"] == tier]
-    return render_template("overskilled.html", rows=cand.head(80).to_dict("records"),
-                           tier=tier, tiers=season().tiers, label=SEASON_LABEL)
+    return render_template("tier_fit.html", rows=cand.head(80).to_dict("records"),
+                           tier=tier, direction=direction, tiers=season().tiers,
+                           label=SEASON_LABEL)
 
 
 @app.route("/team-rankings")
